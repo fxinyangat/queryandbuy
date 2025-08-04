@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+import os
 
 app = FastAPI(title="Query and Buy API", version="1.0.0")
 
@@ -14,7 +15,7 @@ app.add_middleware(
 
 @app.get("/")
 async def root():
-    return {"message": "Query and Buy API is running"}
+    return {"message": "Query and Buy API is running", "port": os.getenv("PORT", "unknown")}
 
 @app.get("/health")
 async def health_check():
@@ -22,4 +23,9 @@ async def health_check():
 
 @app.get("/test")
 async def test():
-    return {"test": "success"} 
+    return {"test": "success"}
+
+if __name__ == "__main__":
+    import uvicorn
+    port = int(os.getenv("PORT", 8000))
+    uvicorn.run(app, host="0.0.0.0", port=port) 
