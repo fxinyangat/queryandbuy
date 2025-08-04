@@ -98,9 +98,13 @@ async def root():
 async def health_check():
     return {
         "status": "healthy",
-        "walmart_service": walmart_service is not None,
-        "amazon_service": amazon_service is not None,
-        "comparison_service": comparison_service is not None
+        "message": "Query and Buy API is running",
+        "services": {
+            "walmart_service": walmart_service is not None,
+            "amazon_service": amazon_service is not None,
+            "comparison_service": comparison_service is not None
+        },
+        "version": "1.0.0"
     }
 
 @app.post("/api/search", response_model=SearchResponse)
