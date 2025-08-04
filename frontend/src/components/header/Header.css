@@ -1,0 +1,98 @@
+.header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    background: #FFFFFF;
+    padding: 20px 16px;
+    height: 72px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    z-index: 1000;
+    margin-left: 0px;
+    box-sizing: border-box;
+    transition: all 0.3s ease;
+}
+
+.header-content {
+    width: 100%;
+    max-width: 1200px;
+    height: 100%;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.header-tabs {
+    display: flex;
+    gap: 48px;
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    height: 100%;
+}
+
+/* When search is active, reset positioning */
+.search-mode .header-tabs {
+    position: static;
+    transform: none;
+    margin-left: auto;
+}
+
+/* Shift header content when sidebar is expanded */
+.sidebar-expanded .header-content {
+    margin-left: 240px;
+    width: calc(100% - 240px);
+}
+
+.header-tab {
+    border: none;
+    background: none;
+    padding: 8px 16px;
+    font-size: 15px;
+    color: #8B93FF;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+    height: 100%;
+    display: flex;
+    align-items: center;
+}
+
+.header-tab:hover {
+    color: #5755FE;
+}
+
+/* Mobile styles */
+@media (max-width: 768px) {
+    .header {
+        padding: 16px 12px;
+        height: 64px;
+    }
+
+    .header-content {
+        gap: 16px;
+        justify-content: center;
+    }
+
+    .sidebar-expanded .header-content {
+        margin-left: 48px;
+        width: calc(100% - 48px);
+    }
+
+    .desktop-only {
+        display: none;
+    }
+
+    .main-content {
+        padding-top: 64px;
+    }
+}
+
+/* Add padding to main content to prevent header overlap */
+.main-content {
+    padding-top: 72px;
+} 

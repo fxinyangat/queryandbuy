@@ -1,0 +1,902 @@
+.comparison-view {
+    position: fixed;
+    top: 80px;
+    right: 0;
+    bottom: 0;
+    width: 90%;
+    max-width: 1200px;
+    background: white;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    border-left: 1px solid rgba(87, 85, 254, 0.1);
+    box-shadow: -4px 0 24px rgba(87, 85, 254, 0.15);
+    transform: translateX(100%);
+    animation: slideIn 0.3s forwards;
+}
+
+@keyframes slideIn {
+    to {
+        transform: translateX(0);
+    }
+}
+
+.comparison-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid rgba(87, 85, 254, 0.1);
+    background: white;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.comparison-header h2 {
+    color: #5755FE;
+    font-size: 20px;
+    margin: 0;
+}
+
+.comparison-header button {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(87, 85, 254, 0.1);
+    color: #5755FE;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+}
+
+.comparison-header button:hover {
+    background: rgba(87, 85, 254, 0.2);
+    transform: rotate(90deg);
+}
+
+.comparison-content {
+    display: flex;
+    height: calc(100% - 70px);
+    overflow: hidden;
+}
+
+.products-overview {
+    width: 420px;
+    min-width: 420px;
+    padding: 20px;
+    border-right: 1px solid rgba(87, 85, 254, 0.1);
+    background: #f8f9ff;
+    overflow-y: auto;
+}
+
+.comparison-product {
+    margin-bottom: 0;
+    width: 100%;
+    padding: 0;
+    border-radius: 12px;
+    background: white;
+    border: 1px solid rgba(87, 85, 254, 0.1);
+    overflow: hidden;
+    position: relative;
+}
+
+.comparison-product:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(87, 85, 254, 0.1);
+}
+
+.comparison-product img {
+    width: 100%;
+    height: 180px;
+    object-fit: cover;
+}
+
+.comparison-product-content {
+    padding: 12px;
+    padding-bottom: 70px;
+}
+
+.product-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+
+.seller-info {
+    font-size: 12px;
+    color: #666;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.delivery-info {
+    font-size: 12px;
+    color: #5755FE;
+}
+
+.product-rating {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 4px;
+}
+
+.stars {
+    display: inline-flex;
+    align-items: center;
+    gap: 1px;
+    font-size: 12px;
+    line-height: 1;
+}
+
+.star {
+    color: #ddd;
+    transition: color 0.2s ease;
+}
+
+.star.filled {
+    color: #FFB800;
+}
+
+.star.half {
+    background: linear-gradient(90deg, #FFB800 50%, #ddd 50%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.star-icon {
+    color: #FFB800;
+    width: 14px;
+    height: 14px;
+}
+
+.review-count {
+    font-size: 12px;
+    color: #666;
+}
+
+.comparison-product h3 {
+    font-size: 14px;
+    margin: 0 0 8px;
+    color: #333;
+}
+
+/* .comparison-product .price {
+    font-size: 16px;
+    font-weight: 600;
+    color: #8B93FF;
+    margin: 0 0 12px;
+} */
+
+.comparison-product-actions {
+    position: absolute;
+    bottom: 12px;
+    right: 12px;
+    margin: 0;
+    padding: 0;
+}
+
+.comparison-product-actions button {
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    background: #5755FE;
+    border: none;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(87, 85, 254, 0.2);
+    transition: all 0.2s ease;
+    padding: 0;
+}
+
+.comparison-product-actions button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(87, 85, 254, 0.3);
+}
+
+.comparison-product-actions button svg {
+    width: 25px;
+    height: 25px;
+}
+
+.buy-now-btn {
+    background: #5755FE;
+    color: white;
+    border: none;
+}
+
+.buy-now-btn:hover {
+    background: #4644e5;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(87, 85, 254, 0.2);
+}
+
+.favorite-btn {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: white;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    z-index: 1;
+    padding: 0;
+}
+
+.favorite-btn svg {
+    width: 18px;
+    height: 18px;
+    fill: none;
+    stroke: #FF5A5A;
+    stroke-width: 2;
+    transition: all 0.2s ease;
+}
+
+.favorite-btn.active svg {
+    fill: #FF5A5A;
+    stroke: #FF5A5A;
+}
+
+.favorite-btn:hover svg {
+    transform: scale(1.1);
+}
+
+.chat-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: #F8F9FF;
+    position: relative;
+}
+
+.chat-history {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.chat-message {
+    position: relative;
+    padding: 16px 20px;
+    border-radius: 18px;
+    max-width: 75%;
+    font-size: 14px;
+    line-height: 1.6;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
+}
+
+.chat-message.user {
+    background: linear-gradient(135deg, #5755FE, #4644fe);
+    color: white;
+    margin-left: auto;
+    border-bottom-right-radius: 6px;
+    box-shadow: 0 4px 12px rgba(87, 85, 254, 0.2);
+}
+
+.chat-message.ai {
+    background: white;
+    color: #333;
+    margin-right: auto;
+    border-bottom-left-radius: 6px;
+    border: 1px solid #e9ecef;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+}
+
+.chat-message.ai .message-content {
+    font-size: 14px;
+}
+
+.chat-message.ai .message-content strong,
+.chat-message.ai .message-content b {
+    font-weight: 600;
+    color: #5755FE;
+}
+
+.chat-message.ai .message-content em {
+    font-style: italic;
+    color: #666;
+}
+
+.chat-message.ai .message-content ul,
+.chat-message.ai .message-content ol {
+    margin: 8px 0;
+    padding-left: 20px;
+}
+
+.chat-message.ai .message-content li {
+    margin: 4px 0;
+}
+
+.chat-message.ai .message-content h3,
+.chat-message.ai .message-content h4 {
+    margin: 12px 0 8px 0;
+    color: #333;
+    font-weight: 600;
+}
+
+.chat-message.ai .message-content p {
+    margin: 8px 0;
+}
+
+.chat-message.user::before {
+    content: 'You';
+    position: absolute;
+    bottom: -20px;
+    right: 0;
+    font-size: 12px;
+    color: #7393B3;
+}
+
+.chat-message.ai::before {
+    content: 'QnB Shop-pilot';
+    position: absolute;
+    bottom: -20px;
+    left: 0;
+    font-size: 12px;
+    color: #A9A9A9;
+   
+}
+
+.chat-input {
+    display: flex;
+    gap: 12px;
+    padding: 20px;
+    background: white;
+    border-top: 1px solid rgba(87, 85, 254, 0.1);
+    position: relative;
+}
+
+.chat-input::before {
+    content: '';
+    position: absolute;
+    top: -20px;
+    left: 0;
+    right: 0;
+    height: 20px;
+    background: linear-gradient(transparent, rgba(248, 249, 255, 0.9));
+    pointer-events: none;
+}
+
+.chat-input input {
+    flex: 1;
+    padding: 16px;
+    border: 1px solid rgba(87, 85, 254, 0.1);
+    border-radius: 24px;
+    font-size: 14px;
+    background: #F8F9FF;
+    transition: all 0.2s ease;
+}
+
+.chat-input input:focus {
+    outline: none;
+    border-color: rgba(87, 85, 254, 0.2);
+    background: white;
+    box-shadow: 0 2px 8px rgba(87, 85, 254, 0.1);
+}
+
+.chat-input button {
+    padding: 12px 24px;
+    background: #5755FE;
+    color: white;
+    border: none;
+    border-radius: 24px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.chat-input button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(87, 85, 254, 0.2);
+}
+
+.chat-input button:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.send-button-loading {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+}
+
+.loading-spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid #ffffff;
+    border-top: 2px solid transparent;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* AI Disclaimer */
+.ai-disclaimer {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 0;
+    margin-top: 8px;
+    font-size: 12px;
+    font-weight: 500;
+    color: #666;
+    line-height: 1.3;
+}
+
+.disclaimer-icon {
+    font-size: 14px;
+    flex-shrink: 0;
+}
+
+.disclaimer-text {
+    flex: 1;
+    font-weight: 500;
+}
+
+.suggested-questions {
+    margin-top: 32px;
+    padding-top: 24px;
+    border-top: 1px solid rgba(87, 85, 254, 0.1);
+}
+
+.suggested-questions h4 {
+    color: #666;
+    margin: 0 0 16px;
+    font-size: 14px;
+}
+
+.suggested-question {
+    display: block;
+    width: 100%;
+    padding: 12px 16px;
+    margin-bottom: 8px;
+    background: white;
+    border: 1px solid rgba(87, 85, 254, 0.1);
+    border-radius: 8px;
+    text-align: left;
+    color: #5755FE;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 13px;
+}
+
+.suggested-question:hover {
+    background: rgba(87, 85, 254, 0.05);
+    border-color: rgba(87, 85, 254, 0.2);
+    transform: translateY(-1px);
+}
+
+/* Typing Animation */
+.typing-animation {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 0;
+}
+
+.typing-dots {
+    display: flex;
+    gap: 4px;
+}
+
+.typing-dots span {
+    width: 8px;
+    height: 8px;
+    background: #5755FE;
+    border-radius: 50%;
+    animation: typing 1.4s infinite ease-in-out;
+}
+
+.typing-dots span:nth-child(1) {
+    animation-delay: -0.32s;
+}
+
+.typing-dots span:nth-child(2) {
+    animation-delay: -0.16s;
+}
+
+.typing-dots span:nth-child(3) {
+    animation-delay: 0s;
+}
+
+.typing-text {
+    font-size: 14px;
+    color: #666;
+    font-style: italic;
+}
+
+.chat-message.ai.typing {
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+}
+
+@keyframes typing {
+    0%, 80%, 100% {
+        transform: scale(0.8);
+        opacity: 0.5;
+    }
+    40% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.chat-message.ai.typing::after {
+    content: '';
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    background: #5755FE;
+    border-radius: 50%;
+    animation: typing 1.4s infinite ease-in-out;
+    margin-left: 4px;
+}
+
+.comparison-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.3);
+    z-index: 999;
+    opacity: 0;
+    animation: fadeIn 0.3s forwards;
+}
+
+@keyframes fadeIn {
+    to {
+        opacity: 1;
+    }
+}
+
+@media (max-width: 1200px) {
+    .comparison-view {
+        width: 100%;
+    }
+
+    .products-overview {
+        width: 380px;
+        min-width: 380px;
+    }
+}
+
+@media (max-width: 1024px) {
+    .products-overview {
+        width: 340px;
+        min-width: 340px;
+    }
+
+    .comparison-product img {
+        height: 160px;
+    }
+}
+
+@media (max-width: 768px) {
+    .comparison-view {
+        top: 60px;
+        width: 100%;
+        max-width: 100%;
+    }
+
+    .comparison-content {
+        flex-direction: column;
+    }
+
+    .products-overview {
+        width: 100%;
+        min-width: 100%;
+        max-height: 200px;
+        padding: 12px;
+        border-right: none;
+        border-bottom: 1px solid rgba(87, 85, 254, 0.1);
+    }
+
+    .products-overview .selected-products {
+        display: flex;
+        grid-template-columns: none;
+        gap: 12px;
+        overflow-x: auto;
+        padding-bottom: 12px;
+    }
+
+    .comparison-product {
+        min-width: 200px;
+        flex-shrink: 0;
+    }
+
+    .comparison-product img {
+        height: 160px;
+    }
+
+    .suggested-questions {
+        margin-top: 16px;
+        padding-top: 16px;
+    }
+
+    .suggested-questions .suggested-question {
+        padding: 10px 14px;
+        font-size: 12px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .chat-section {
+        flex: 1;
+        min-height: 0;
+    }
+
+    .chat-history {
+        padding: 16px;
+    }
+
+    .chat-message {
+        max-width: 85%;
+        padding: 10px 14px;
+        font-size: 13px;
+    }
+
+    .chat-input {
+        padding: 12px;
+    }
+
+    .chat-input input {
+        padding: 12px;
+        font-size: 13px;
+    }
+
+    .chat-input button {
+        padding: 10px 20px;
+        font-size: 13px;
+    }
+}
+
+@media (max-height: 500px) {
+    .comparison-view {
+        top: 0;
+    }
+
+    .products-overview {
+        max-height: 150px;
+    }
+
+    .comparison-product img {
+        height: 80px;
+    }
+}
+
+.mobile-swipe-indicator {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    .mobile-swipe-indicator {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 8px;
+        color: #666;
+        font-size: 12px;
+        gap: 8px;
+    }
+
+    .mobile-swipe-indicator::before,
+    .mobile-swipe-indicator::after {
+        content: '';
+        width: 40px;
+        height: 2px;
+        background: rgba(87, 85, 254, 0.1);
+        border-radius: 2px;
+    }
+}
+
+/* Add these styles for the character limit indicator */
+.chat-input {
+    position: relative;
+}
+
+.char-limit {
+    position: absolute;
+    right: 100px;
+    top: -20px;
+    font-size: 12px;
+    color: #666;
+    background: rgba(255, 255, 255, 0.9);
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+/* Add typing indicator styles */
+.chat-message.typing {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.typing-indicator {
+    display: flex;
+    gap: 4px;
+    padding: 8px 12px;
+}
+
+.typing-indicator span {
+    width: 6px;
+    height: 6px;
+    background: #5755FE;
+    border-radius: 50%;
+    animation: typing 1s infinite;
+}
+
+.typing-indicator span:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.typing-indicator span:nth-child(3) {
+    animation-delay: 0.4s;
+}
+
+@keyframes typing {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-4px); }
+}
+
+/* Mobile adjustments for character limit */
+@media (max-width: 768px) {
+    .char-limit {
+        right: 85px;
+        top: -18px;
+        font-size: 11px;
+    }
+}
+
+/* Update products grid layout */
+.products-overview .selected-products {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr); /* 2 columns */
+    gap: 16px;
+    padding-bottom: 16px;
+}
+
+.comparison-product {
+    margin-bottom: 0; /* Remove margin since we're using grid gap */
+    width: 100%; /* Ensure full width within grid cell */
+}
+
+/* Mobile view adjustments */
+@media (max-width: 768px) {
+    .products-overview .selected-products {
+        display: flex; /* Keep horizontal scroll on mobile */
+        grid-template-columns: none;
+        gap: 12px;
+        overflow-x: auto;
+        padding-bottom: 12px;
+    }
+
+    .comparison-product {
+        min-width: 200px;
+        flex-shrink: 0; /* Prevent shrinking in flex container */
+    }
+}
+
+/* Adjust product image height for better grid proportions */
+.comparison-product img {
+    height: 180px; /* Slightly reduced height for better grid view */
+}
+
+@media (max-width: 1024px) {
+    .comparison-product img {
+        height: 160px;
+    }
+}
+
+/* Add styles for seller and delivery info */
+.product-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(87, 85, 254, 0.05);
+}
+
+.seller-info {
+    font-size: 12px;
+    color: #666;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.delivery-info {
+    font-size: 12px;
+    color: #5755FE;
+    margin-left: auto;
+}
+
+.price-rating-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 8px 0;
+    height: 24px; /* Fixed height for alignment */
+}
+
+.price, .product-rating {
+    font-size: 16px;
+    font-weight: 600;
+    color: #8B93FF;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin: 0;
+}
+
+.product-rating {
+    color: #FFB800;
+}
+
+.star-icon {
+    color: #FFB800;
+    width: 14px;
+    height: 14px;
+    margin-top: 1px;
+}
+
+/* Add remove button styles */
+.remove-btn {
+    position: absolute;
+    top: 12px;
+    left: 12px; /* Position on left while heart stays on right */
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: white;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    z-index: 1;
+    padding: 0;
+    color: #666;
+    transition: all 0.2s ease;
+}
+
+.remove-btn:hover {
+    color: #FF5A5A;
+    transform: scale(1.1);
+}
+
+.remove-btn svg {
+    width: 16px;
+    height: 16px;
+} 

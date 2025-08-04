@@ -1,0 +1,23 @@
+.logo-container {
+    display: flex;
+    align-items: center;
+    transition: all 0.3s ease;
+    z-index: 2; /* Ensure logo stays above sidebar */
+}
+
+.logo {
+    height: 40px;
+    transition: all 0.3s ease;
+}
+
+/* Mobile styles */
+@media (max-width: 768px) {
+    .search-mode .logo-container {
+        position: relative; /* Changed from absolute to relative */
+        margin: 0 auto; /* Center the logo */
+    }
+
+    .logo {
+        height: 32px;
+    }
+} 

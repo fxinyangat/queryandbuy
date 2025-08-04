@@ -1,0 +1,229 @@
+/* Add these base styles */
+html, body {
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden; /* Prevent horizontal scroll */
+    width: 100%;
+}
+
+.App {
+    text-align: center;
+    min-height: 100vh;
+    background-color: #FFFFFF;
+    width: 100%;
+    overflow-x: hidden; /* Prevent horizontal scroll */
+    position: relative;
+}
+
+.App-header {
+    background-color: white;
+    padding: 1rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.App-header h1 {
+    margin: 0;
+    color: #4285f4;
+}
+
+main {
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+    margin-top: 50px;
+}
+
+.loading {
+    margin-top: 2rem;
+    color: #666;
+    font-size: 1.2rem;
+}
+
+.main-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-top: 5vh;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+
+.logo-container {
+    text-align: center;
+    margin-bottom: 40px;
+    padding: 0 20px;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.logo {
+    height: 120px;
+    margin-bottom: 16px;
+    transition: all 0.3s ease;
+    max-width: 100%;
+    object-fit: contain;
+}
+
+.tagline {
+    color: #5755FE;
+    font-size: 18px;
+    margin: 0;
+    padding: 0 20px;
+    line-height: 1.4;
+}
+
+/* Search mode styles */
+.App.search-mode .logo-container {
+    position: static;
+    margin: 0;
+    padding: 0;
+    height: 40px;
+}
+
+.App.search-mode .logo {
+    height: 40px;
+    margin: 0;
+    margin-left: 50px;
+}
+
+.App.search-mode .tagline {
+    display: none;
+}
+
+/* Update header styles when in search mode */
+.App.search-mode .header {
+    padding: 10px 20px;
+}
+
+/* Mobile styles */
+@media (max-width: 480px) {
+    .main-content {
+        padding-top: 3vh;
+    }
+
+    .logo {
+        height: 80px;
+    }
+
+    .tagline {
+        font-size: 16px;
+    }
+
+    .App.search-mode .logo-container {
+        height: 32px;
+    }
+
+    .App.search-mode .logo {
+        height: 32px;
+    }
+}
+
+.sidebar-toggle {
+    background: none;
+    border: none;
+    font-size: 24px;
+    color: #5755FE;
+    cursor: pointer;
+    padding: 8px;
+    margin-right: 16px;
+    border-radius: 8px;
+    transition: background 0.2s;
+}
+
+.sidebar-toggle:hover {
+    background: rgba(87, 85, 254, 0.1);
+}
+
+/* Update the floating search and compare button positioning */
+.App.search-mode .search-container {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    margin: 0;
+    z-index: 1000;
+    width: 90%;
+    max-width: 800px;
+}
+
+.compare-mode-toggle {
+    position: fixed;
+    bottom: calc(24px + 70px); /* Position above search bar */
+    right: 24px; /* Keep on right side */
+    background: #5755FE;
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 24px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    z-index: 1000;
+    box-shadow: 0 4px 12px rgba(87, 85, 254, 0.2);
+}
+
+.compare-mode-toggle:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(87, 85, 254, 0.3);
+}
+
+/* Mobile adjustments */
+@media (max-width: 768px) {
+    .App.search-mode .search-container {
+        bottom: 16px;
+        width: 92%;
+    }
+
+    .compare-mode-toggle {
+        bottom: calc(16px + 60px); /* Adjust for mobile search bar height */
+        right: 16px;
+        padding: 10px 20px;
+        font-size: 14px;
+    }
+
+    /* When in search mode, adjust the main content padding */
+    .App.search-mode .main-content {
+        padding-bottom: 140px;
+    }
+}
+
+/* For very small screens */
+@media (max-width: 380px) {
+    .compare-mode-toggle {
+        padding: 8px 16px;
+        font-size: 13px;
+    }
+}
+
+/* Error message styles */
+.error-message {
+    background: #fee;
+    border: 1px solid #fcc;
+    border-radius: 8px;
+    padding: 16px;
+    margin: 16px 0;
+    color: #c33;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.error-message p {
+    margin: 0;
+    flex: 1;
+}
+
+.error-message button {
+    background: #c33;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-left: 16px;
+}
+
+.error-message button:hover {
+    background: #a22;
+} 

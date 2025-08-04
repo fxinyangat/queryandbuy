@@ -1,0 +1,74 @@
+.pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    margin-top: -20px;
+    padding: 20px 0;
+    
+}
+
+.pagination-numbers {
+    display: flex;
+    gap: 8px;
+    
+}
+
+.pagination-button,
+.pagination-number {
+    padding: 8px 16px;
+    border: 1px solid rgba(87, 85, 254, 0.1);
+    background: white;
+    border-radius: 8px;
+    color: #5755FE;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.pagination-number {
+    min-width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.pagination-button:hover,
+.pagination-number:hover {
+    background: rgba(87, 85, 254, 0.05);
+    border-color: rgba(87, 85, 254, 0.2);
+}
+
+.pagination-number.active {
+    background: #5755FE;
+    color: white;
+    border-color: #5755FE;
+}
+
+.pagination-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background: rgba(0, 0, 0, 0.05);
+}
+
+/* Mobile styles */
+@media (max-width: 768px) {
+    .pagination {
+        gap: 8px;
+        margin-top: 12px;
+        padding: 16px 0;
+    }
+
+    .pagination-button,
+    .pagination-number {
+        padding: 6px 12px;
+        font-size: 14px;
+    }
+}
+
+/* Add this to the existing Pagination.css */
+.pagination-ellipsis {
+    padding: 8px;
+    color: #5755FE;
+    font-weight: bold;
+} 

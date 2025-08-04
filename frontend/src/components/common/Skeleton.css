@@ -1,0 +1,42 @@
+.skeleton {
+    background: linear-gradient(
+        90deg,
+        rgba(135, 147, 255, 0.06),
+        rgba(87, 85, 254, 0.1),
+        rgba(135, 147, 255, 0.06)
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: 8px;
+}
+
+.skeleton.product-card {
+    height: 350px;
+}
+
+.skeleton.image {
+    height: 200px;
+    border-radius: 8px 8px 0 0;
+}
+
+.skeleton.title {
+    height: 20px;
+    margin: 16px 16px 8px;
+}
+
+.skeleton.price {
+    height: 24px;
+    width: 80px;
+    margin: 8px 16px;
+}
+
+.skeleton.rating {
+    height: 16px;
+    width: 120px;
+    margin: 8px 16px;
+}
+
+@keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+} 
