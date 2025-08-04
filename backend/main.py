@@ -31,22 +31,22 @@ app.add_middleware(
 # Initialize Walmart service
 try:
     walmart_service = WalmartService()
-except ValueError as e:
-    print(f"Warning: {e}")
+except Exception as e:
+    print(f"Warning: Walmart service not available - {e}")
     walmart_service = None
 
 # Initialize Amazon service
 try:
     amazon_service = AmazonService()
-except ValueError as e:
-    print(f"Warning: {e}")
+except Exception as e:
+    print(f"Warning: Amazon service not available - {e}")
     amazon_service = None
 
 # Initialize Comparison service
 try:
     comparison_service = ComparisonService()
-except ValueError as e:
-    print(f"Warning: {e}")
+except Exception as e:
+    print(f"Warning: Comparison service not available - {e}")
     comparison_service = None
 
 class SearchRequest(BaseModel):
@@ -93,6 +93,15 @@ class ComparisonResponse(BaseModel):
 @app.get("/")
 async def root():
     return {"message": "Query and Buy API is running"}
+
+@app.get("/health")
+async def health_check():
+    return {
+        "status": "healthy",
+        "walmart_service": walmart_service is not None,
+        "amazon_service": amazon_service is not None,
+        "comparison_service": comparison_service is not None
+    }
 
 @app.post("/api/search", response_model=SearchResponse)
 async def search_products(request: SearchRequest):
