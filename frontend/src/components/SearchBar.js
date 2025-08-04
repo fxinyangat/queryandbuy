@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Paper, InputBase, IconButton } from '@material-ui/core';
-import { Search as SearchIcon } from '@material-ui/icons';
+import { Paper, InputBase, IconButton } from '@mui/material';
+import { Search as SearchIcon } from '@mui/icons-material';
 
 const SearchBar = ({ onSearch }) => {
   const [query, setQuery] = useState('');
