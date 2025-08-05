@@ -190,7 +190,7 @@ const ComparisonView = ({ products, onClose, onRemoveProduct }) => {
             <div className="comparison-overlay" onClick={onClose} />
             <div className="comparison-view">
                 <div className="comparison-header">
-                    <h2>QnB Intelligent Shopping</h2>
+                    <h2>Shop-pilot Intelligent Shopping</h2>
                     <button onClick={onClose}>×</button>
                 </div>
                 
@@ -329,7 +329,7 @@ const ComparisonView = ({ products, onClose, onRemoveProduct }) => {
                         </form>
                         
                         <div className="ai-disclaimer">
-                            <div className="disclaimer-icon">ℹ️</div>
+                           
                             <div className="disclaimer-text">
                             Shop-pilot may make mistakes. Double check the details before purchasing.
                             </div>
