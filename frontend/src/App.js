@@ -9,6 +9,7 @@ import logo from './assets/logo.png'; // Make sure to add the logo to this path
 import Sidebar from './components/sidebar/Sidebar';
 import CompareBar from './components/comparison/CompareBar';
 import ComparisonView from './components/comparison/ComparisonView';
+import ComparisonHistory from './components/sidebar/ComparisonHistory';
 import { API_BASE_URL } from './config';
 import './App.css';
 
@@ -22,6 +23,7 @@ function App() {
     const [selectedProducts, setSelectedProducts] = useState([]);
     const [isComparing, setIsComparing] = useState(false);
     const [searchError, setSearchError] = useState(null);
+    const [comparisonHistory, setComparisonHistory] = useState([]);
 
     // Update the mock products with AI insights
     const mockProducts = [
@@ -457,6 +459,36 @@ function App() {
         setSelectedProducts(prev => prev.filter(product => product.id !== productId));
     };
 
+    const saveComparisonToHistory = (products, searchQuery) => {
+        const newComparison = {
+            products: products,
+            searchQuery: searchQuery,
+            date: new Date().toLocaleDateString(),
+            timestamp: Date.now()
+        };
+        
+        setComparisonHistory(prev => {
+            // Add new comparison to the beginning
+            const updated = [newComparison, ...prev];
+            // Keep only last 10 comparisons
+            return updated.slice(0, 10);
+        });
+    };
+
+    const handleSelectComparison = (comparison) => {
+        // Load the comparison products
+        setSelectedProducts(comparison.products);
+        setIsComparing(true);
+    };
+
+    const handleClearComparisonHistory = (updatedHistory) => {
+        if (updatedHistory) {
+            setComparisonHistory(updatedHistory);
+        } else {
+            setComparisonHistory([]);
+        }
+    };
+
     return (
         <div className={`App ${hasSearched ? 'search-mode' : ''} ${isSidebarExpanded ? 'sidebar-expanded' : ''}`}>
             <Header>
@@ -538,6 +570,10 @@ function App() {
                         products={selectedProducts}
                         onClose={handleCloseComparison}
                         onRemoveProduct={handleRemoveProduct}
+                        onSaveToHistory={saveComparisonToHistory}
+                        comparisonHistory={comparisonHistory}
+                        onSelectComparison={handleSelectComparison}
+                        onClearComparisonHistory={handleClearComparisonHistory}
                     />
                 )}
             </main>
@@ -545,4 +581,4 @@ function App() {
     );
 }
 
-export default App; 
+export default App;

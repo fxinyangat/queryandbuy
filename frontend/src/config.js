@@ -1,5 +1,5 @@
 // Easy toggle for development vs production
-const USE_LOCAL_BACKEND = true; // Set to false for production
+const USE_LOCAL_BACKEND = false; // Set to false for production
 
 const config = {
   development: {

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { API_BASE_URL } from '../../config';
 import './ComparisonView.css';
 import { parseMarkdown } from '../../utils/markdownParser';
+import ConfirmationDialog from '../common/ConfirmationDialog';
 
 const TypingAnimation = () => (
     <div className="typing-animation">
@@ -14,17 +15,23 @@ const TypingAnimation = () => (
     </div>
 );
 
-const ComparisonView = ({ products, onClose, onRemoveProduct }) => {
+const ComparisonView = ({ products, onClose, onRemoveProduct, onSaveToHistory, comparisonHistory, onSelectComparison, onClearComparisonHistory }) => {
     const [message, setMessage] = useState('');
     const [chatHistory, setChatHistory] = useState([]);
     const [isTyping, setIsTyping] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [favorites, setFavorites] = useState([]);
+    const [openDropdown, setOpenDropdown] = useState(null);
+    const [confirmationDialog, setConfirmationDialog] = useState({ isOpen: false, index: null });
 
     // Add state for mobile view
     const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
-    const suggestedQuestions = products.length === 1 ? [
+    const suggestedQuestions = products.length === 0 ? [
+        "Select products to compare",
+        "Choose items from search results",
+        "Add products to start chatting"
+    ] : products.length === 1 ? [
         "Tell me more about this product",
         "What are its key features?",
         "Is this good value for money?",
@@ -44,6 +51,16 @@ const ComparisonView = ({ products, onClose, onRemoveProduct }) => {
 
     useEffect(() => {
         const searchQuery = localStorage.getItem('lastSearchQuery') || 'products';
+        
+        if (products.length === 0) {
+            // No products selected - show message to select products
+            setChatHistory([{
+                type: 'ai',
+                content: `Hi! I'm your QnB AI Adviser. You haven't selected any products to compare yet. Please select one or more products from your search results to start comparing and chatting about them.`
+            }]);
+            return;
+        }
+        
         const initialMessage = {
             type: 'ai',
             content: products.length === 1 
@@ -74,6 +91,21 @@ const ComparisonView = ({ products, onClose, onRemoveProduct }) => {
         return () => window.removeEventListener('resize', handleResize);
     }, []);
 
+    // Handle clicking outside dropdowns
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (openDropdown !== null) {
+                const dropdown = document.querySelector(`[data-dropdown="${openDropdown}"]`);
+                if (dropdown && !dropdown.contains(event.target)) {
+                    setOpenDropdown(null);
+                }
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [openDropdown]);
+
     useEffect(() => {
         const handleKeyPress = (e) => {
             if (e.key === 'Escape') onClose();
@@ -100,6 +132,15 @@ const ComparisonView = ({ products, onClose, onRemoveProduct }) => {
         
         const messageToSend = suggestedMessage || message;
         if (!messageToSend.trim()) return;
+
+        // Don't allow sending messages when no products are selected
+        if (products.length === 0) {
+            setChatHistory(prev => [...prev, {
+                type: 'ai',
+                content: "Please select one or more products from your search results to start comparing and chatting about them."
+            }]);
+            return;
+        }
 
         // Add user message to chat
         const newMessage = {
@@ -152,6 +193,12 @@ const ComparisonView = ({ products, onClose, onRemoveProduct }) => {
             
             setChatHistory(prev => [...prev, aiResponse]);
             
+            // Save to history if this is a successful comparison
+            if (onSaveToHistory && data.ai_analysis) {
+                const searchQuery = localStorage.getItem('lastSearchQuery') || 'products';
+                onSaveToHistory(products, searchQuery);
+            }
+            
         } catch (error) {
             console.error('Error calling comparison API:', error);
             
@@ -196,92 +243,156 @@ const ComparisonView = ({ products, onClose, onRemoveProduct }) => {
                 
                 <div className="comparison-content">
                     <div className="products-overview">
-                        <div className="selected-products">
-                            {products.map(product => (
-                                <div key={product.id} className="comparison-product">
-                                    <button 
-                                        className="remove-btn"
-                                        onClick={() => handleRemoveProduct(product.id)}
-                                        title="Remove from comparison"
-                                    >
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                            <path d="M18 6L6 18M6 6l12 12"/>
-                                        </svg>
-                                    </button>
-                                    <button 
-                                        className={`favorite-btn ${favorites.includes(product.id) ? 'active' : ''}`}
-                                        onClick={() => toggleFavorite(product.id)}
-                                    >
-                                        <svg viewBox="0 0 24 24">
-                                            <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
-                                        </svg>
-                                    </button>
-                                    <img src={product.image} alt={product.title} />
-                                    <div className="comparison-product-content">
-                                        <div className="product-meta">
-                                            <span className="seller-info">
-                                                <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
-                                                    <path d="M21.5 15a3 3 0 0 1-3 3h-13a3 3 0 0 1-3-3V9a3 3 0 0 1 3-3h13a3 3 0 0 1 3 3v6zm-3-7h-13a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h13a1 1 0 0 0 1-1V9a1 1 0 0 0-1-1z"/>
-                                                </svg>
-                                                {product.source}
-                                            </span>
-                                            <span className="delivery-info">{product.shipping}</span>
-                                        </div>
-                                        
-                                        <h3>{product.title}</h3>
-                                        
-                                        <div className="price-rating-row">
-                                            <p className="price">${product.price}</p>
-                                                                        <div className="product-rating">
-                                <div className="stars">
-                                    {[1, 2, 3, 4, 5].map((star) => {
-                                        const starClass = product.rating >= star ? 'filled' : 
-                                                        product.rating >= star - 0.5 ? 'half' : '';
-                                        return (
-                                            <span key={star} className={`star ${starClass}`}>★</span>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                                        </div>
+                        <div className="scrollable-content">
+                            <div className="selected-products">
+                                {products.map(product => (
+                                    <div key={product.id} className="comparison-product">
+                                        <button 
+                                            className="remove-btn"
+                                            onClick={() => handleRemoveProduct(product.id)}
+                                            title="Remove from comparison"
+                                        >
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                <path d="M18 6L6 18M6 6l12 12"/>
+                                            </svg>
+                                        </button>
+                                        <button 
+                                            className={`favorite-btn ${favorites.includes(product.id) ? 'active' : ''}`}
+                                            onClick={() => toggleFavorite(product.id)}
+                                        >
+                                            <svg viewBox="0 0 24 24">
+                                                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+                                            </svg>
+                                        </button>
+                                        <img src={product.image} alt={product.title} />
+                                        <div className="comparison-product-content">
+                                            <div className="product-meta">
+                                                <span className="seller-info">
+                                                    <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+                                                        <path d="M21.5 15a3 3 0 0 1-3 3h-13a3 3 0 0 1-3-3V9a3 3 0 0 1 3-3h13a3 3 0 0 1 3 3v6zm-3-7h-13a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h13a1 1 0 0 0 1-1V9a1 1 0 0 0-1-1z"/>
+                                                    </svg>
+                                                    {product.source}
+                                                </span>
+                                                <span className="delivery-info">{product.shipping}</span>
+                                            </div>
+                                            
+                                            <h3>{product.title}</h3>
+                                            
+                                            <div className="price-rating-row">
+                                                <p className="price">${product.price}</p>
+                                                <div className="product-rating">
+                                                    <div className="stars">
+                                                        {[1, 2, 3, 4, 5].map((star) => {
+                                                            const starClass = product.rating >= star ? 'filled' : 
+                                                                            product.rating >= star - 0.5 ? 'half' : '';
+                                                            return (
+                                                                <span key={star} className={`star ${starClass}`}>★</span>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </div>
+                                            </div>
 
-                                        <div className="comparison-product-actions">
-                                            <button 
-                                                className="cart-btn"
-                                                onClick={() => handleBuyNow(product)}
-                                                title="Add to Cart"
-                                            >
-                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                                    <path d="M9 20a1 1 0 100 2 1 1 0 000-2zm7 0a1 1 0 100 2 1 1 0 000-2zm-7-4h7a2 2 0 002-2V6H6.97l-.5-2H3"/>
-                                                    <path d="M6 6l2 8h9"/>
-                                                </svg>
-                                            </button>
+                                            <div className="comparison-product-actions">
+                                                <button 
+                                                    className="cart-btn"
+                                                    onClick={() => handleBuyNow(product)}
+                                                    title="Add to Cart"
+                                                >
+                                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                        <path d="M9 20a1 1 0 100 2 1 1 0 000-2zm7 0a1 1 0 100 2 1 1 0 000-2zm-7-4h7a2 2 0 002-2V6H6.97l-.5-2H3"/>
+                                                        <path d="M6 6l2 8h9"/>
+                                                    </svg>
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            ))}
-                        </div>
-
-                        {isMobile && (
-                            <div className="mobile-swipe-indicator">
-                                <span>Scroll for more products</span>
-                            </div>
-                        )}
-
-                        <div className="suggested-questions">
-                            <h4>Suggested Questions</h4>
-                            <div className={isMobile ? 'questions-scroll' : ''}>
-                                {suggestedQuestions.map((question, index) => (
-                                    <button
-                                        key={index}
-                                        className="suggested-question"
-                                        onClick={() => handleSuggestedQuestion(question)}
-                                    >
-                                        {question}
-                                    </button>
                                 ))}
                             </div>
+
+                            {isMobile && (
+                                <div className="mobile-swipe-indicator">
+                                    <span>Scroll for more products</span>
+                                </div>
+                            )}
+
+                            <div className="suggested-questions">
+                                <h4>Suggested Questions</h4>
+                                <div className={isMobile ? 'questions-scroll' : ''}>
+                                    {suggestedQuestions.map((question, index) => (
+                                        <button
+                                            key={index}
+                                            className="suggested-question"
+                                            onClick={() => handleSuggestedQuestion(question)}
+                                        >
+                                            {question}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Comparison History */}
+                            {comparisonHistory.length > 0 && (
+                              <div className="comparison-history-section">
+                                <h4>Previous Comparisons</h4>
+                                <div className="comparison-history-list">
+                                  {comparisonHistory.slice(0, 3).map((comparison, index) => (
+                                    <div 
+                                      key={index} 
+                                      className="comparison-history-item"
+                                    >
+                                      <div 
+                                        className="comparison-history-content"
+                                        onClick={() => onSelectComparison(comparison)}
+                                        title={`Click to reload comparison from ${comparison.date}`}
+                                      >
+                                        <div className="comparison-images">
+                                          {comparison.products.slice(0, 3).map((product, productIndex) => (
+                                            <img 
+                                              key={productIndex}
+                                              src={product.image} 
+                                              alt={product.title}
+                                              className="comparison-history-image"
+                                            />
+                                          ))}
+                                          {comparison.products.length > 3 && (
+                                            <div className="more-products-indicator">
+                                              +{comparison.products.length - 3}
+                                            </div>
+                                          )}
+                                        </div>
+                                      </div>
+                                      <div className="comparison-history-menu" data-dropdown={`comparison-${index}`}>
+                                        <button 
+                                          className="menu-dots-btn"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setOpenDropdown(openDropdown === `comparison-${index}` ? null : `comparison-${index}`);
+                                          }}
+                                          title="More options"
+                                        >
+                                          ⋯
+                                        </button>
+                                        <div className={`dropdown-menu ${openDropdown === `comparison-${index}` ? 'show' : ''}`}>
+                                          <div 
+                                            className="dropdown-item delete-option"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setConfirmationDialog({ isOpen: true, index: index });
+                                            }}
+                                          >
+                                            🗑️ Delete
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
                         </div>
+
+
                     </div>
 
                     <div className="chat-section">
@@ -337,6 +448,18 @@ const ComparisonView = ({ products, onClose, onRemoveProduct }) => {
                     </div>
                 </div>
             </div>
+            <ConfirmationDialog
+                isOpen={confirmationDialog.isOpen}
+                title="Confirm Deletion"
+                message="This action cannot be undone."
+                confirmText="Delete"
+                confirmButtonClass="delete-btn"
+                onConfirm={() => {
+                    onClearComparisonHistory(comparisonHistory.filter((_, i) => i !== confirmationDialog.index));
+                    setConfirmationDialog({ ...confirmationDialog, isOpen: false });
+                }}
+                onCancel={() => setConfirmationDialog({ ...confirmationDialog, isOpen: false })}
+            />
         </>
     );
 };

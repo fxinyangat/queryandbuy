@@ -1,7 +1,14 @@
 import React, { useEffect, useRef } from 'react';
 import './Sidebar.css';
 
-const Sidebar = ({ isExpanded, onToggle, searchHistory, onHistoryItemClick, onMenuItemClick }) => {
+const Sidebar = ({ 
+    isExpanded, 
+    onToggle, 
+    searchHistory, 
+    onHistoryItemClick, 
+    onClearHistory,
+    onMenuItemClick 
+}) => {
     const sidebarRef = useRef(null);
 
     useEffect(() => {
@@ -57,6 +64,15 @@ const Sidebar = ({ isExpanded, onToggle, searchHistory, onHistoryItemClick, onMe
                                     <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2"/>
                                 </svg>
                                 <h3>Recent Searches</h3>
+                                {searchHistory.length > 0 && (
+                                    <button 
+                                        className="clear-history-btn"
+                                        onClick={onClearHistory}
+                                        title="Clear all history"
+                                    >
+                                        Clear
+                                    </button>
+                                )}
                             </div>
                             {searchHistory.length > 0 ? (
                                 searchHistory.map((item, index) => (
