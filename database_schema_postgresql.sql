@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict nl6LEHVLKEr9xHb3ptO8wpUQe36qmlfJXhSxws1axnOOiSqOfFhR9OQOXb12Ndq
+\restrict ksKM5Lfpl1UlOIkQLgjmmoGQe9xGXjOTxHBYtTmZYZG99cXASL9KarmWYr5PlwG
 
 -- Dumped from database version 17.2
 -- Dumped by pg_dump version 17.6 (Homebrew)
@@ -297,7 +297,8 @@ CREATE TABLE public.search_history (
     platform character varying(50) NOT NULL,
     results_count integer,
     created_at timestamp with time zone DEFAULT now(),
-    deleted_at timestamp with time zone
+    deleted_at timestamp with time zone,
+    custom_label character varying(200)
 );
 
 
@@ -1011,5 +1012,5 @@ ALTER TABLE ONLY public.user_sessions
 -- PostgreSQL database dump complete
 --
 
-\unrestrict nl6LEHVLKEr9xHb3ptO8wpUQe36qmlfJXhSxws1axnOOiSqOfFhR9OQOXb12Ndq
+\unrestrict ksKM5Lfpl1UlOIkQLgjmmoGQe9xGXjOTxHBYtTmZYZG99cXASL9KarmWYr5PlwG
 
