@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict ksKM5Lfpl1UlOIkQLgjmmoGQe9xGXjOTxHBYtTmZYZG99cXASL9KarmWYr5PlwG
+\restrict xZ9yE19ejGEQy1LEcfSgAbeXIfyE8rmBycEftZHOyNcliX6cuNA4gtROAAHG6b5
 
 -- Dumped from database version 17.2
 -- Dumped by pg_dump version 17.6 (Homebrew)
@@ -298,7 +298,8 @@ CREATE TABLE public.search_history (
     results_count integer,
     created_at timestamp with time zone DEFAULT now(),
     deleted_at timestamp with time zone,
-    custom_label character varying(200)
+    custom_label character varying(200),
+    query_key character varying(512)
 );
 
 
@@ -737,6 +738,13 @@ CREATE INDEX idx_products_platform ON public.products USING btree (platform_name
 
 
 --
+-- Name: idx_search_history_query_key; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_search_history_query_key ON public.search_history USING btree (query_key);
+
+
+--
 -- Name: idx_user_events_event_data; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1012,5 +1020,5 @@ ALTER TABLE ONLY public.user_sessions
 -- PostgreSQL database dump complete
 --
 
-\unrestrict ksKM5Lfpl1UlOIkQLgjmmoGQe9xGXjOTxHBYtTmZYZG99cXASL9KarmWYr5PlwG
+\unrestrict xZ9yE19ejGEQy1LEcfSgAbeXIfyE8rmBycEftZHOyNcliX6cuNA4gtROAAHG6b5
 
