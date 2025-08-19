@@ -3,6 +3,11 @@ import { API_BASE_URL } from '../../config';
 import './ComparisonView.css';
 import { parseMarkdown } from '../../utils/markdownParser';
 import ConfirmationDialog from '../common/ConfirmationDialog';
+import { useCompare } from '../../hooks/useCompare';
+import ComparisonHistory from '../sidebar/ComparisonHistory';
+import { useAuth } from '../../contexts/AuthContext';
+import { useFavorites } from '../../hooks/useFavorites';
+import Skeleton from '../common/Skeleton';
 
 const TypingAnimation = () => (
     <div className="typing-animation">
@@ -15,7 +20,10 @@ const TypingAnimation = () => (
     </div>
 );
 
-const ComparisonView = ({ products, onClose, onRemoveProduct, onSaveToHistory, comparisonHistory, onSelectComparison, onClearComparisonHistory }) => {
+// ComparisonView
+// WHAT: Chat-like interface for comparing/selecting products and conversing with AI
+// WHY: Central UX for product decisions; now supports resuming sessions from history
+const ComparisonView = ({ products, onClose, onRemoveProduct, onSaveToHistory, comparisonHistory, onSelectComparison, onClearComparisonHistory, sessionId, onMinimize }) => {
     const [message, setMessage] = useState('');
     const [chatHistory, setChatHistory] = useState([]);
     const [isTyping, setIsTyping] = useState(false);
@@ -23,6 +31,9 @@ const ComparisonView = ({ products, onClose, onRemoveProduct, onSaveToHistory, c
     const [favorites, setFavorites] = useState([]);
     const [openDropdown, setOpenDropdown] = useState(null);
     const [confirmationDialog, setConfirmationDialog] = useState({ isOpen: false, index: null });
+    const { isAuthenticated } = useAuth();
+    const { fetchMessages, sendMessage } = useCompare();
+    const { checkFavorite, toggleFavorite } = useFavorites();
 
     // Add state for mobile view
     const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
@@ -50,37 +61,67 @@ const ComparisonView = ({ products, onClose, onRemoveProduct, onSaveToHistory, c
     const MAX_MESSAGE_LENGTH = 500;
 
     useEffect(() => {
+        // Initialize favorite status for shown products
+        let cancelled = false;
+        async function initFavs() {
+            if (!isAuthenticated || products.length === 0) return;
+            try {
+                const results = await Promise.all(products.map(p => checkFavorite(p.id)));
+                if (cancelled) return;
+                const favIds = products.filter((_, i) => results[i]?.exists).map(p => p.id);
+                setFavorites(favIds);
+            } catch (_) {}
+        }
+        initFavs();
+        return () => { cancelled = true; };
+    }, [isAuthenticated, products, checkFavorite]);
+
+    useEffect(() => {
+        // Show a single welcome message for brand-new sessions (no sessionId)
+        if (sessionId) return;
         const searchQuery = localStorage.getItem('lastSearchQuery') || 'products';
-        
         if (products.length === 0) {
-            // No products selected - show message to select products
-            setChatHistory([{
-                type: 'ai',
-                content: `Hi! I'm your QnB AI Adviser. You haven't selected any products to compare yet. Please select one or more products from your search results to start comparing and chatting about them.`
-            }]);
+            setChatHistory([{ type: 'ai', content: `Hi! I'm your QnB AI Adviser. Select one or more products to get started.` }]);
             return;
         }
-        
         const initialMessage = {
             type: 'ai',
-            content: products.length === 1 
-                ? `Hi! I'm your QnB AI Adviser. I can help you learn more about this ${products[0].title} from your search for "${searchQuery}". What would you like to know?`
+            content: products.length === 1
+                ? `Hi! I'm your QnB AI Adviser. I can help you with ${products[0].title} from your search for "${searchQuery}". What would you like to know?`
                 : `Hi! I'm your QnB AI Adviser. I can help you compare these ${products.length} products from your search for "${searchQuery}". What would you like to know?`
         };
-        
-        // Update the chat history with the new initial message
-        setChatHistory(prev => {
-            // If it's the first message (initial load), replace it
-            if (prev.length === 1) {
-                return [initialMessage];
+        setChatHistory([initialMessage]);
+    }, [sessionId]);
+
+    // EFFECT: If sessionId provided (resume mode), load existing messages
+    useEffect(() => {
+        let mounted = true;
+        async function loadMessages() {
+            if (!sessionId || !isAuthenticated) return;
+            try {
+                const res = await fetchMessages(sessionId, { limit: 100, offset: 0 });
+                if (!mounted) return;
+                const mapped = (res.items || []).map(m => ({ type: m.message_type === 'ai' ? 'ai' : 'user', content: m.message_content }));
+                if (mapped.length > 0) {
+                    setChatHistory(mapped);
+                } else {
+                    // Fresh session with no messages yet: show a local welcome prompt
+                    const searchQuery = localStorage.getItem('lastSearchQuery') || 'products';
+                    const welcome = {
+                        type: 'ai',
+                        content: (products.length === 1)
+                          ? `Hi! I'm your QnB AI Adviser. I can help you with ${products[0].title} from your search for "${searchQuery}". What would you like to know?`
+                          : `Hi! I'm your QnB AI Adviser. I can help you compare these ${products.length} products from your search for "${searchQuery}". What would you like to know?`
+                    };
+                    setChatHistory([welcome]);
+                }
+            } catch (_) {
+                // non-fatal
             }
-            // If there are other messages, add a system update
-            return [...prev, {
-                type: 'ai',
-                content: `A product was removed. Now comparing ${products.length} products from your search for "${searchQuery}".`
-            }];
-        });
-    }, [products.length]); // Add products.length as dependency
+        }
+        loadMessages();
+        return () => { mounted = false; };
+    }, [sessionId, isAuthenticated, fetchMessages]);
 
     useEffect(() => {
         const handleResize = () => {
@@ -166,35 +207,38 @@ const ComparisonView = ({ products, onClose, onRemoveProduct, onSaveToHistory, c
                 total_reviews: product.reviews
             }));
 
-            // Call the comparison API
-            const response = await fetch(`${API_BASE_URL}/api/compare`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    products: productsData,
-                    user_question: messageToSend,
-                    original_search_query: localStorage.getItem('lastSearchQuery') || 'products'
-                })
-            });
+            let compareData = null;
+            if (sessionId && isAuthenticated) {
+                // Resume mode: send to server, append real AI reply
+                const result = await sendMessage(sessionId, messageToSend);
+                const aiText = (result && result.ai_message) ? result.ai_message : 'Analyzing your products...';
+                setChatHistory(prev => [...prev, { type: 'ai', content: aiText }]);
+            } else {
+                // New ad-hoc comparison (no session): use existing compare endpoint
+                const response = await fetch(`${API_BASE_URL}/api/compare`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        products: productsData,
+                        user_question: messageToSend,
+                        original_search_query: localStorage.getItem('lastSearchQuery') || 'products'
+                    })
+                });
 
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                compareData = await response.json();
+                // Add AI response to chat
+                const aiResponse = { type: 'ai', content: compareData.ai_analysis };
+                setChatHistory(prev => [...prev, aiResponse]);
             }
-
-            const data = await response.json();
-            
-            // Add AI response to chat
-            const aiResponse = {
-                type: 'ai',
-                content: data.ai_analysis
-            };
-            
-            setChatHistory(prev => [...prev, aiResponse]);
             
             // Save to history if this is a successful comparison
-            if (onSaveToHistory && data.ai_analysis) {
+            if (!sessionId && onSaveToHistory && compareData && compareData.ai_analysis) {
                 const searchQuery = localStorage.getItem('lastSearchQuery') || 'products';
                 onSaveToHistory(products, searchQuery);
             }
@@ -219,13 +263,14 @@ const ComparisonView = ({ products, onClose, onRemoveProduct, onSaveToHistory, c
        alert("This feature is not available yet. Please check back later.");
     };
 
-    const toggleFavorite = (productId) => {
-        setFavorites(prev => {
-            if (prev.includes(productId)) {
-                return prev.filter(id => id !== productId);
-            }
-            return [...prev, productId];
-        });
+    const handleToggleFavorite = async (product) => {
+        if (!isAuthenticated) return;
+        try {
+            const isFav = favorites.includes(product.id);
+            const snapshot = { platform_name: product.source, product_name: product.title, product_url: product.url, image_url: product.image };
+            const next = await toggleFavorite(product.id, isFav, snapshot);
+            setFavorites(prev => next ? [...prev, product.id] : prev.filter(id => id !== product.id));
+        } catch (_) {}
     };
 
     const handleRemoveProduct = (productId) => {
@@ -238,7 +283,10 @@ const ComparisonView = ({ products, onClose, onRemoveProduct, onSaveToHistory, c
             <div className="comparison-view">
                 <div className="comparison-header">
                     <h2>Shop-pilot Intelligent Shopping</h2>
-                    <button onClick={onClose}>×</button>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                        <button title="Minimize" onClick={() => onMinimize?.()} style={{ fontSize: 18 }}>—</button>
+                        <button onClick={onClose}>×</button>
+                    </div>
                 </div>
                 
                 <div className="comparison-content">
@@ -258,13 +306,21 @@ const ComparisonView = ({ products, onClose, onRemoveProduct, onSaveToHistory, c
                                         </button>
                                         <button 
                                             className={`favorite-btn ${favorites.includes(product.id) ? 'active' : ''}`}
-                                            onClick={() => toggleFavorite(product.id)}
+                                            onClick={() => handleToggleFavorite(product)}
                                         >
                                             <svg viewBox="0 0 24 24">
                                                 <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
                                             </svg>
                                         </button>
-                                        <img src={product.image} alt={product.title} />
+                                        {(!product.image || !product.title || product.price == null || product.rating == null) ? (
+                                            <div style={{ width: 180 }}>
+                                                <Skeleton type="thumbnail" />
+                                                <Skeleton type="text" />
+                                                <Skeleton type="text" />
+                                            </div>
+                                        ) : (
+                                            <img src={product.image} alt={product.title} />
+                                        )}
                                         <div className="comparison-product-content">
                                             <div className="product-meta">
                                                 <span className="seller-info">
@@ -276,15 +332,19 @@ const ComparisonView = ({ products, onClose, onRemoveProduct, onSaveToHistory, c
                                                 <span className="delivery-info">{product.shipping}</span>
                                             </div>
                                             
-                                            <h3>{product.title}</h3>
+                                            <h3>{product.title || 'Loading…'}</h3>
                                             
                                             <div className="price-rating-row">
-                                                <p className="price">${product.price}</p>
+                                                {product.price == null ? (
+                                                    <Skeleton type="text" />
+                                                ) : (
+                                                    <p className="price">${product.price}</p>
+                                                )}
                                                 <div className="product-rating">
                                                     <div className="stars">
                                                         {[1, 2, 3, 4, 5].map((star) => {
-                                                            const starClass = product.rating >= star ? 'filled' : 
-                                                                            product.rating >= star - 0.5 ? 'half' : '';
+                                                            const val = product.rating ?? 0;
+                                                            const starClass = val >= star ? 'filled' : val >= star - 0.5 ? 'half' : '';
                                                             return (
                                                                 <span key={star} className={`star ${starClass}`}>★</span>
                                                             );
@@ -331,65 +391,13 @@ const ComparisonView = ({ products, onClose, onRemoveProduct, onSaveToHistory, c
                                 </div>
                             </div>
 
-                            {/* Comparison History */}
-                            {comparisonHistory.length > 0 && (
-                              <div className="comparison-history-section">
-                                <h4>Previous Comparisons</h4>
-                                <div className="comparison-history-list">
-                                  {comparisonHistory.slice(0, 3).map((comparison, index) => (
-                                    <div 
-                                      key={index} 
-                                      className="comparison-history-item"
-                                    >
-                                      <div 
-                                        className="comparison-history-content"
-                                        onClick={() => onSelectComparison(comparison)}
-                                        title={`Click to reload comparison from ${comparison.date}`}
-                                      >
-                                        <div className="comparison-images">
-                                          {comparison.products.slice(0, 3).map((product, productIndex) => (
-                                            <img 
-                                              key={productIndex}
-                                              src={product.image} 
-                                              alt={product.title}
-                                              className="comparison-history-image"
-                                            />
-                                          ))}
-                                          {comparison.products.length > 3 && (
-                                            <div className="more-products-indicator">
-                                              +{comparison.products.length - 3}
-                                            </div>
-                                          )}
-                                        </div>
-                                      </div>
-                                      <div className="comparison-history-menu" data-dropdown={`comparison-${index}`}>
-                                        <button 
-                                          className="menu-dots-btn"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            setOpenDropdown(openDropdown === `comparison-${index}` ? null : `comparison-${index}`);
-                                          }}
-                                          title="More options"
-                                        >
-                                          ⋯
-                                        </button>
-                                        <div className={`dropdown-menu ${openDropdown === `comparison-${index}` ? 'show' : ''}`}>
-                                          <div 
-                                            className="dropdown-item delete-option"
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              setConfirmationDialog({ isOpen: true, index: index });
-                                            }}
-                                          >
-                                            🗑️ Delete
-                                          </div>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
+                            {/* Comparison History within comparison view */}
+                            <ComparisonHistory 
+                                comparisonHistory={comparisonHistory}
+                                onSelectComparison={onSelectComparison}
+                                onClearHistory={() => onClearComparisonHistory?.()}
+                                selectedComparisonId={sessionId}
+                            />
                         </div>
 
 
@@ -408,7 +416,7 @@ const ComparisonView = ({ products, onClose, onRemoveProduct, onSaveToHistory, c
                                 </div>
                             ))}
                             {isTyping && (
-                                <div className="chat-message ai typing">
+                                <div className="chat-message ai typing" style={{ pointerEvents: 'none' }}>
                                     <TypingAnimation />
                                 </div>
                             )}

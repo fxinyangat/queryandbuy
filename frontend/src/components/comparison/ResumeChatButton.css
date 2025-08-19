@@ -1,0 +1,24 @@
+.resume-chat-fab {
+  position: fixed;
+  right: 20px;
+  bottom: 80px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: #5755FE;
+  color: #fff;
+  box-shadow: 0 12px 24px rgba(87,85,254,0.25);
+  border: none;
+  cursor: pointer;
+  z-index: 1050;
+}
+.resume-chat-fab:hover { filter: brightness(0.95); }
+.resume-chat-fab span { font-weight: 600; font-size: 14px; }
+
+@media (max-width: 768px) {
+  .resume-chat-fab { bottom: 70px; right: 16px; }
+}
+
+

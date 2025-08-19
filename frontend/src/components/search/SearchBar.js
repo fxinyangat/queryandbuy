@@ -1,14 +1,17 @@
 import React, { useState } from 'react';
 import './SearchBar.css';
 
+// SearchBar
+// WHAT: Main search input
+// WHY: We also persist the last search query for downstream features (chat intro)
 const SearchBar = ({ onSearch, isExpanded }) => {
     const [query, setQuery] = useState('');
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        if (query.trim()) {
-            onSearch(query);
-        }
+        if (!query.trim()) return;
+        localStorage.setItem('lastSearchQuery', query.trim());
+        onSearch(query);
     };
 
     return (

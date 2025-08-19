@@ -1,0 +1,23 @@
+.compare-mini {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  background: #ffffff;
+  border: 1px solid rgba(87,85,254,0.2);
+  box-shadow: 0 10px 24px rgba(0,0,0,0.12);
+  border-radius: 12px;
+  z-index: 1100;
+}
+
+.compare-mini-content { display: flex; align-items: center; gap: 12px; padding: 10px 12px; }
+.compare-mini-title { font-size: 14px; font-weight: 600; color: #333; }
+.compare-mini-actions { display: flex; gap: 8px; }
+.mini-btn { padding: 6px 10px; border-radius: 8px; border: none; background: #5755FE; color: #fff; cursor: pointer; font-size: 13px; }
+.mini-btn.ghost { background: #f4f4ff; color: #5755FE; }
+.mini-btn:hover { filter: brightness(0.95); }
+
+@media (max-width: 768px) {
+  .compare-mini { right: 12px; bottom: 12px; }
+}
+
+

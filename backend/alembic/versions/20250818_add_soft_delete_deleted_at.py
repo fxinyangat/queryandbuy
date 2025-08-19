@@ -22,6 +22,7 @@ def upgrade():
     op.add_column('user_events', sa.Column('deleted_at', sa.DateTime(timezone=True), nullable=True))
     op.add_column('user_favorites', sa.Column('deleted_at', sa.DateTime(timezone=True), nullable=True))
     op.add_column('search_history', sa.Column('deleted_at', sa.DateTime(timezone=True), nullable=True))
+    op.add_column('search_history', sa.Column('custom_label', sa.String(length=200), nullable=True))
     op.add_column('products', sa.Column('deleted_at', sa.DateTime(timezone=True), nullable=True))
     op.add_column('chat_history', sa.Column('deleted_at', sa.DateTime(timezone=True), nullable=True))
 

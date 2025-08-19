@@ -96,18 +96,19 @@
 
 .comparison-query {
     margin: 0;
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 500;
     color: #333;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    max-width: 24ch; /* truncate earlier for cleaner layout */
 }
 
 .comparison-date {
     margin: 0;
-    font-size: 12px;
-    color: #666;
+    font-size: 11px; /* reduced size per request */
+    color: #8a8a8a;
 }
 
 /* Mobile responsiveness */

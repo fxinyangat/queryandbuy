@@ -112,3 +112,10 @@ curl -X POST "http://localhost:8000/api/search" \
   -H "Content-Type: application/json" \
   -d '{"query": "men jackets", "page": 1}'
 ``` 
+
+# SIDE NOTEs
+# Kill existing backend
+pkill -f "uvicorn main:app"
+
+# Start new backend + frontend
+chmod +x start-local.sh && ./start-local.sh

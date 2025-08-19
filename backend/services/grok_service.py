@@ -1,8 +1,10 @@
 import requests
 import json
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 from fastapi import HTTPException
 import os
+import time
+from collections import OrderedDict
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -11,6 +13,11 @@ class GrokService:
     def __init__(self):
         self.api_key = os.getenv("GROK_API_KEY")
         self.base_url = os.getenv("GROK_API_URL", "https://api.x.ai/v1")
+        # Simple in-memory TTL LRU cache for query summaries
+        # key -> (expires_at_epoch_seconds, summary)
+        self._summary_cache: "OrderedDict[str, Tuple[float, str]]" = OrderedDict()
+        self._summary_ttl = int(os.getenv("GROK_SUMMARY_CACHE_TTL_SECONDS", "21600"))  # 6 hours default
+        self._summary_max_size = int(os.getenv("GROK_SUMMARY_CACHE_MAX", "10000"))
         
         if not self.api_key:
             raise ValueError("GROK_API_KEY environment variable is required")
@@ -206,3 +213,50 @@ Keep it conversational and easy to read. Always remind users to verify informati
             import traceback
             traceback.print_exc()
             raise HTTPException(status_code=500, detail=f"Grok API call failed: {str(e)}") 
+
+    def summarize_query(self, text: str) -> str:
+        """
+        Produce a very short, human-friendly search title from a long user query.
+        Keep it concise (3-6 words), remove noise, and avoid punctuation.
+        Includes a small in-memory TTL cache to avoid repeated LLM calls.
+        """
+        try:
+            text = (text or "").strip()
+            if not text:
+                return ""
+
+            # TTL cache lookup (normalize key)
+            key = " ".join(text.lower().split())
+            now = time.time()
+            cached = self._summary_cache.get(key)
+            if cached:
+                exp, val = cached
+                if exp >= now:
+                    # LRU bump
+                    self._summary_cache.move_to_end(key)
+                    return val
+
+            prompt = (
+                "You are a query title generator. Given a long shopping query, "
+                "return ONLY a very short, human-friendly title (3-6 words), "
+                "no punctuation, no quotes, title case, and remove noise words.\n\n"
+                f"Query: {text}\n"
+                "Short Title:"
+            )
+            output = self._call_grok_api(prompt)
+            # Take first line, strip punctuation, clamp length
+            short = (output or "").splitlines()[0].strip().strip('"\' .,:;')
+            if len(short) > 64:
+                short = short[:64].rstrip()
+
+            # Cache set with TTL and LRU maintenance
+            self._summary_cache[key] = (now + max(60, self._summary_ttl), short)
+            self._summary_cache.move_to_end(key)
+            # Enforce max size
+            while len(self._summary_cache) > self._summary_max_size:
+                self._summary_cache.popitem(last=False)
+
+            return short
+        except Exception as e:
+            print(f"GrokService: summarize_query error: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"Summarization failed: {str(e)}")

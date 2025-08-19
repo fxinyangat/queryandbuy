@@ -1,6 +1,10 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { COLORS } from '../../styles/colors';
 import './ProductCard.css';
+import { useActivity } from '../../hooks/useActivity';
+import { useFavorites } from '../../hooks/useFavorites';
+import { useAuth } from '../../contexts/AuthContext';
+import { toast } from 'react-toastify';
 
 const SparkleIcon = () => (
     <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -19,11 +23,18 @@ const SparkleIcon = () => (
     </svg>
 );
 
+// ProductCard
+// WHAT: Renders a product summary card with save (favorite), select (compare), and basic interactions
+// WHY: Central card element in search results. We log product views/clicks for analytics and
+//      support favorites via the unified favorites API.
 const ProductCard = ({ product, onClick, isCompareMode, onCompareToggle, isSelected }) => {
-    console.log('Product data:', product);
     const [isSaved, setIsSaved] = useState(false);
     const [showCelebration, setShowCelebration] = useState(false);
     const [showCartCelebration, setShowCartCelebration] = useState(false);
+    const { isAuthenticated } = useAuth();
+    const { sendEvent } = useActivity();
+    const { checkFavorite, toggleFavorite } = useFavorites();
+    const didLogViewRef = useRef(false);
     const {
         image,
         title,
@@ -36,17 +47,27 @@ const ProductCard = ({ product, onClick, isCompareMode, onCompareToggle, isSelec
         aiInsights
     } = product;
 
-    const handleSave = (e) => {
+    // Handle favorite toggle
+    const handleSave = async (e) => {
         e.stopPropagation();
-        setIsSaved(!isSaved);
-        
-        // Show celebration animation when saving
-        if (!isSaved) {
-            setShowCelebration(true);
-            setTimeout(() => setShowCelebration(false), 2000);
+        if (!isAuthenticated) {
+            toast.info('Sign in to save favorites');
+            return;
         }
-        
-        // Handle save action
+        try {
+            const next = await toggleFavorite(product.id, isSaved);
+            setIsSaved(next);
+            if (next) {
+                // Show celebration animation when saving
+                setShowCelebration(true);
+                setTimeout(() => setShowCelebration(false), 2000);
+                toast.success('Added to favorites');
+            } else {
+                toast.info('Removed from favorites');
+            }
+        } catch (err) {
+            toast.error('Failed to update favorites');
+        }
     };
 
     const handleCardClick = (e) => {
@@ -59,6 +80,21 @@ const ProductCard = ({ product, onClick, isCompareMode, onCompareToggle, isSelec
         e.stopPropagation();
         onCompareToggle(product);
     };
+
+    // EFFECT: Log a product_view event once when component first mounts/paints
+    useEffect(() => {
+        if (didLogViewRef.current) return;
+        didLogViewRef.current = true;
+        // Non-blocking analytics event
+        sendEvent({ event_type: 'product_view', product_id: product.id, source: 'results_grid' }).catch(() => {});
+        // Initialize favorite status (best-effort)
+        if (isAuthenticated) {
+            checkFavorite(product.id)
+                .then(({ exists }) => setIsSaved(!!exists))
+                .catch(() => {});
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     return (
         <div className={`product-card ${isSelected ? 'selected' : ''}`} onClick={handleCardClick}>

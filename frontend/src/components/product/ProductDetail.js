@@ -1,7 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import './ProductDetail.css';
+import { useCompareContext } from '../../contexts/CompareContext';
 
 const ProductDetail = ({ product, onClose }) => {
+    const { getProductDetailCached } = useCompareContext();
     const [touchStart, setTouchStart] = useState(null);
     const [touchEnd, setTouchEnd] = useState(null);
     const [isDragging, setIsDragging] = useState(false);

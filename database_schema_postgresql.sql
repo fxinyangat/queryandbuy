@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict xZ9yE19ejGEQy1LEcfSgAbeXIfyE8rmBycEftZHOyNcliX6cuNA4gtROAAHG6b5
+\restrict zkrGJUldrMCKAUzz1dwMhaIwEsLrwEGgjJGoabWyDNPI76jSh9al1TK1sfwKAtG
 
 -- Dumped from database version 17.2
 -- Dumped by pg_dump version 17.6 (Homebrew)
@@ -20,17 +20,17 @@ SET client_min_messages = warning;
 SET row_security = off;
 
 --
--- Name: public; Type: SCHEMA; Schema: -; Owner: -
+-- Name: uuid-ossp; Type: EXTENSION; Schema: -; Owner: -
 --
 
-CREATE SCHEMA public;
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp" WITH SCHEMA public;
 
 
 --
--- Name: SCHEMA public; Type: COMMENT; Schema: -; Owner: -
+-- Name: EXTENSION "uuid-ossp"; Type: COMMENT; Schema: -; Owner: -
 --
 
-COMMENT ON SCHEMA public IS 'standard public schema';
+COMMENT ON EXTENSION "uuid-ossp" IS 'generate universally unique identifiers (UUIDs)';
 
 
 --
@@ -738,6 +738,13 @@ CREATE INDEX idx_products_platform ON public.products USING btree (platform_name
 
 
 --
+-- Name: idx_search_history_lower_search_query; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_search_history_lower_search_query ON public.search_history USING btree (lower((search_query)::text));
+
+
+--
 -- Name: idx_search_history_query_key; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1020,5 +1027,5 @@ ALTER TABLE ONLY public.user_sessions
 -- PostgreSQL database dump complete
 --
 
-\unrestrict xZ9yE19ejGEQy1LEcfSgAbeXIfyE8rmBycEftZHOyNcliX6cuNA4gtROAAHG6b5
+\unrestrict zkrGJUldrMCKAUzz1dwMhaIwEsLrwEGgjJGoabWyDNPI76jSh9al1TK1sfwKAtG
 

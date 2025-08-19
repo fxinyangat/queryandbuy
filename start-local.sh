@@ -13,7 +13,8 @@ if check_port 8000; then
 else
     echo "🔧 Starting backend..."
     cd backend
-    python -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload &
+    # Activate virtual environment and start backend
+    source venv/bin/activate && python -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload &
     BACKEND_PID=$!
     cd ..
     echo "✅ Backend started with PID: $BACKEND_PID"
