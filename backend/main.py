@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Depends, Request, BackgroundTasks
+from fastapi import FastAPI, HTTPException, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Dict, List, Optional
@@ -10,7 +10,7 @@ from services.comparison_service import ComparisonService
 from services.grok_service import GrokService
 from services.user_service import UserService
 from services.activity_service import ActivityService
-from database import get_db, engine, SessionLocal
+from database import get_db, engine
 from models import Base
 from schemas import UserRegisterRequest, UserLoginRequest, AuthResponse, ErrorResponse
 from schemas import (
@@ -704,7 +704,7 @@ class ChatMessageCreateRequest(BaseModel):
     message_content: str
 
 @app.post("/api/compare/sessions/{comparison_id}/messages")
-async def add_chat_message(comparison_id: str, body: ChatMessageCreateRequest, background_tasks: BackgroundTasks, current_user = Depends(get_current_user), db = Depends(get_db)):
+async def add_chat_message(comparison_id: str, body: ChatMessageCreateRequest, current_user = Depends(get_current_user), db = Depends(get_db)):
     try:
         if not body.message_content or not body.message_content.strip():
             raise HTTPException(status_code=400, detail="message_content is required")
@@ -718,67 +718,65 @@ async def add_chat_message(comparison_id: str, body: ChatMessageCreateRequest, b
             message_content=body.message_content.strip(),
         )
 
-        # Queue AI reply generation so it continues even if client disconnects
-        def _generate_and_store_reply(cid: str, uid, user_msg: str):
-            db_bg = SessionLocal()
-            try:
-                act = ActivityService(db_bg)
-                sess = act.get_comparison_session(uid, cid)
-                if not sess:
-                    return
-                rows = act.list_comparison_products(cid)
-                selected = []
-                try:
-                    from models import Product, ProductPrice, ProductRating
-                    for r in rows:
-                        prod = db_bg.query(Product).filter(Product.product_id == r.product_id).first()
-                        price_row = (
-                            db_bg.query(ProductPrice)
-                            .filter(ProductPrice.product_id == r.product_id)
-                            .order_by(ProductPrice.price_recorded_at.desc())
-                            .first()
-                        )
-                        rating_row = (
-                            db_bg.query(ProductRating)
-                            .filter(ProductRating.product_id == r.product_id)
-                            .order_by(ProductRating.rating_recorded_at.desc())
-                            .first()
-                        )
-                        selected.append({
-                            "id": r.product_id,
-                            "platform": (prod.platform_name if prod else None) or "walmart",
-                            "url": getattr(prod, "product_url", None),
-                            "name": getattr(prod, "product_name", None),
-                            "image": getattr(prod, "image_url", None),
-                            "price": getattr(price_row, "current_price", None),
-                            "original_price": getattr(price_row, "original_price", None),
-                            "currency": getattr(price_row, "currency_code", None),
-                            "currency_symbol": getattr(price_row, "currency_symbol", None),
-                            "in_stock": getattr(price_row, "is_in_stock", None),
-                            "rating": getattr(rating_row, "average_rating", None),
-                            "total_reviews": getattr(rating_row, "total_review_count", None),
-                        })
-                except Exception:
-                    selected = [{"id": r.product_id, "platform": "walmart"} for r in rows]
-                if not comparison_service:
-                    return
-                comp = comparison_service.compare_products(
-                    selected_products=selected,
-                    user_question=user_msg,
-                    original_search_query=sess.original_search_query,
-                )
-                ai_content_local = comp.get("ai_analysis") or "I analyzed the products based on your question."
-                act.add_chat_message(
-                    user_id=uid,
-                    comparison_id=cid,
-                    message_type="ai",
-                    message_content=ai_content_local,
-                )
-            finally:
-                db_bg.close()
+        # Generate AI reply synchronously and return it
+        session = activity.get_comparison_session(current_user["user_id"], comparison_id)
+        if not session:
+            raise HTTPException(status_code=404, detail="Comparison session not found")
 
-        background_tasks.add_task(_generate_and_store_reply, comparison_id, current_user["user_id"], body.message_content.strip())
-        return {"ok": True, "queued": True}
+        # Collect product ids and include enriched snapshot (price, rating, stock, name, image)
+        products_rows = activity.list_comparison_products(comparison_id)
+        selected_products = []
+        try:
+            from models import Product, ProductPrice, ProductRating
+            for row in products_rows:
+                prod = db.query(Product).filter(Product.product_id == row.product_id).first()
+                price_row = (
+                    db.query(ProductPrice)
+                    .filter(ProductPrice.product_id == row.product_id)
+                    .order_by(ProductPrice.price_recorded_at.desc())
+                    .first()
+                )
+                rating_row = (
+                    db.query(ProductRating)
+                    .filter(ProductRating.product_id == row.product_id)
+                    .order_by(ProductRating.rating_recorded_at.desc())
+                    .first()
+                )
+                selected_products.append({
+                    "id": row.product_id,
+                    "platform": (prod.platform_name if prod else None) or "walmart",
+                    "url": getattr(prod, "product_url", None),
+                    "name": getattr(prod, "product_name", None),
+                    "image": getattr(prod, "image_url", None),
+                    "price": getattr(price_row, "current_price", None),
+                    "original_price": getattr(price_row, "original_price", None),
+                    "currency": getattr(price_row, "currency_code", None),
+                    "currency_symbol": getattr(price_row, "currency_symbol", None),
+                    "in_stock": getattr(price_row, "is_in_stock", None),
+                    "rating": getattr(rating_row, "average_rating", None),
+                    "total_reviews": getattr(rating_row, "total_review_count", None),
+                })
+        except Exception:
+            selected_products = [{"id": row.product_id, "platform": "walmart"} for row in products_rows]
+
+        if not comparison_service:
+            raise HTTPException(status_code=500, detail="Comparison service not configured")
+
+        comp = comparison_service.compare_products(
+            selected_products=selected_products,
+            user_question=body.message_content.strip(),
+            original_search_query=session.original_search_query,
+        )
+
+        ai_content = comp.get("ai_analysis") or "I analyzed the products based on your question."
+        activity.add_chat_message(
+            user_id=current_user["user_id"],
+            comparison_id=comparison_id,
+            message_type="ai",
+            message_content=ai_content,
+        )
+
+        return {"ok": True, "ai_message": ai_content}
     except HTTPException:
         raise
     except Exception as e:

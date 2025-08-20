@@ -9,16 +9,14 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useFavorites } from '../../hooks/useFavorites';
 import Skeleton from '../common/Skeleton';
 
-const TypingAnimation = ({ count = 1 }) => (
+const TypingAnimation = () => (
     <div className="typing-animation">
         <div className="typing-dots">
             <span></span>
             <span></span>
             <span></span>
         </div>
-        <div className="typing-text">
-            {count > 1 ? `Generating ${count} replies...` : 'Shop-pilot is thinking...'}
-        </div>
+        <div className="typing-text">Shop-pilot is thinking...</div>
     </div>
 );
 
@@ -29,7 +27,6 @@ const ComparisonView = ({ products, onClose, onRemoveProduct, onSaveToHistory, c
     const [message, setMessage] = useState('');
     const [chatHistory, setChatHistory] = useState([]);
     const [isTyping, setIsTyping] = useState(false);
-    const [pendingCount, setPendingCount] = useState(0);
     const [isLoading, setIsLoading] = useState(false);
     const [favorites, setFavorites] = useState([]);
     const [openDropdown, setOpenDropdown] = useState(null);
@@ -197,7 +194,6 @@ const ComparisonView = ({ products, onClose, onRemoveProduct, onSaveToHistory, c
 
         setIsLoading(true);
         setIsTyping(true);
-        setPendingCount((n) => n + 1);
 
         try {
             // Prepare products data for API
@@ -213,54 +209,10 @@ const ComparisonView = ({ products, onClose, onRemoveProduct, onSaveToHistory, c
 
             let compareData = null;
             if (sessionId && isAuthenticated) {
-                // Resume mode: send to server; if queued, poll until AI reply arrives
+                // Resume mode: send to server, expect synchronous ai_message
                 const result = await sendMessage(sessionId, messageToSend);
-                if (result && result.ai_message) {
-                    setChatHistory(prev => [...prev, { type: 'ai', content: result.ai_message }]);
-                    setPendingCount((n) => {
-                        const next = Math.max(0, n - 1);
-                        if (next === 0) setIsTyping(false);
-                        return next;
-                    });
-                } else {
-                    // Background generation path: poll messages until the AI reply is saved
-                    let attempts = 0;
-                    const maxAttempts = 30; // ~45s at 1.5s
-                    const poll = async () => {
-                        try {
-                            const res = await fetchMessages(sessionId, { limit: 100, offset: 0 });
-                            const mapped = (res.items || []).map(m => ({ type: m.message_type === 'ai' ? 'ai' : 'user', content: m.message_content }));
-                            if (mapped.length > 0) {
-                                setChatHistory(mapped);
-                                if (mapped[mapped.length - 1].type === 'ai') {
-                                    setPendingCount((n) => {
-                                        const next = Math.max(0, n - 1);
-                                        if (next === 0) setIsTyping(false);
-                                        return next;
-                                    });
-                                    return true;
-                                }
-                            }
-                        } catch (_) {}
-                        return false;
-                    };
-                    // immediate poll then interval
-                    let done = await poll();
-                    if (!done) {
-                        const id = setInterval(async () => {
-                            attempts += 1;
-                            const ok = await poll();
-                            if (ok || attempts >= maxAttempts) {
-                                clearInterval(id);
-                                setPendingCount((n) => {
-                                    const next = Math.max(0, n - 1);
-                                    if (next === 0) setIsTyping(false);
-                                    return next;
-                                });
-                            }
-                        }, 1500);
-                    }
-                }
+                const aiText = (result && result.ai_message) ? result.ai_message : 'Analyzing your products...';
+                setChatHistory(prev => [...prev, { type: 'ai', content: aiText }]);
             } else {
                 // New ad-hoc comparison (no session): use existing compare endpoint
                 const response = await fetch(`${API_BASE_URL}/api/compare`, {
@@ -283,11 +235,6 @@ const ComparisonView = ({ products, onClose, onRemoveProduct, onSaveToHistory, c
                 // Add AI response to chat
                 const aiResponse = { type: 'ai', content: compareData.ai_analysis };
                 setChatHistory(prev => [...prev, aiResponse]);
-                setPendingCount((n) => {
-                    const next = Math.max(0, n - 1);
-                    if (next === 0) setIsTyping(false);
-                    return next;
-                });
             }
             
             // Save to history if this is a successful comparison
@@ -306,14 +253,9 @@ const ComparisonView = ({ products, onClose, onRemoveProduct, onSaveToHistory, c
             };
             
             setChatHistory(prev => [...prev, errorResponse]);
-            setPendingCount((n) => {
-                const next = Math.max(0, n - 1);
-                if (next === 0) setIsTyping(false);
-                return next;
-            });
         } finally {
             setIsLoading(false);
-            // keep isTyping true while pendingCount > 0
+            setIsTyping(false);
         }
     };
 
@@ -473,9 +415,9 @@ const ComparisonView = ({ products, onClose, onRemoveProduct, onSaveToHistory, c
                                     />
                                 </div>
                             ))}
-                            {isTyping && pendingCount > 0 && (
+                            {isTyping && (
                                 <div className="chat-message ai typing" style={{ pointerEvents: 'none' }}>
-                                    <TypingAnimation count={pendingCount} />
+                                    <TypingAnimation />
                                 </div>
                             )}
                         </div>
