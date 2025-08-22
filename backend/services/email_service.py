@@ -20,6 +20,10 @@ class EmailService:
         # TLS/SSL toggles for local dev (aiosmtpd/MailHog don't support STARTTLS)
         self.smtp_tls = os.getenv("SMTP_TLS", "true").lower() in ("1", "true", "yes")
         self.smtp_ssl = os.getenv("SMTP_SSL", "false").lower() in ("1", "true", "yes")
+        # Inline asset embedding (CID) for emails
+        self.embed_assets = os.getenv("EMAIL_EMBED_ASSETS", "false").lower() in ("1", "true", "yes")
+        self.logo_path = os.getenv("EMAIL_LOGO_PATH")
+        self.banner_path = os.getenv("EMAIL_BANNER_PATH")
 
     def send_email(self, to_email: str, subject: str, html: str, text: Optional[str] = None):
         msg = EmailMessage()
@@ -31,6 +35,31 @@ class EmailService:
             text = self._html_to_text(html)
         msg.set_content(text)
         msg.add_alternative(html, subtype="html")
+
+        # Embed local assets via CID when requested
+        if self.embed_assets:
+            try:
+                html_part = msg.get_body('html')
+                import mimetypes
+                def add_cid(path: str, cid: str):
+                    if not path:
+                        return
+                    try:
+                        with open(path, 'rb') as f:
+                            data = f.read()
+                        mime, _ = mimetypes.guess_type(path)
+                        maintype, subtype = (mime.split('/') if mime else ('application', 'octet-stream'))
+                        html_part.add_related(data, maintype=maintype, subtype=subtype, cid=cid)
+                    except Exception:
+                        pass
+                # Known CIDs used in templates
+                if self.logo_path and 'cid:logo@shopqnb' in html:
+                    add_cid(self.logo_path, 'logo@shopqnb')
+                if self.banner_path and 'cid:banner@shopqnb' in html:
+                    add_cid(self.banner_path, 'banner@shopqnb')
+            except Exception:
+                # Non-fatal; continue without inline assets
+                pass
 
         # Choose SSL or plain SMTP
         if self.smtp_ssl:

@@ -120,8 +120,10 @@ def render_verify_email_html(link: str, code: str, name: str | None = None) -> s
     brand = "ShopQnB AI"
     color = "#5755FE"
     # Placeholder logo URL; replace with your CDN asset
-    logo = os.getenv("BRAND_LOGO_URL", "https://queryandbuy.vercel.app/logo.png")
-    banner = os.getenv("VERIFY_BANNER_URL", "https://via.placeholder.com/800x260/EEF/99C")
+    # Prefer embedded CIDs if EMAIL_EMBED_ASSETS=true and paths configured
+    embed = os.getenv("EMAIL_EMBED_ASSETS", "false").lower() in ("1", "true", "yes")
+    logo = "cid:logo@shopqnb" if embed else os.getenv("BRAND_LOGO_URL", "https://queryandbuy.vercel.app/logo.png")
+    banner = "cid:banner@shopqnb" if embed else os.getenv("VERIFY_BANNER_URL", "https://via.placeholder.com/800x260/EEF/99C")
     return f"""
 <!doctype html>
 <html>
@@ -182,8 +184,9 @@ def render_verify_email_text(link: str, code: str, name: str | None = None) -> s
 def render_reset_email_html(link: str, code: str, name: str | None = None) -> str:
     brand = "ShopQnB AI"
     color = "#5755FE"
-    logo = os.getenv("BRAND_LOGO_URL", "https://queryandbuy.vercel.app/logo.png")
-    banner = os.getenv("RESET_BANNER_URL", "https://via.placeholder.com/800x260/EEF/99C")
+    embed = os.getenv("EMAIL_EMBED_ASSETS", "false").lower() in ("1", "true", "yes")
+    logo = "cid:logo@shopqnb" if embed else os.getenv("BRAND_LOGO_URL", "https://queryandbuy.vercel.app/logo.png")
+    banner = "cid:banner@shopqnb" if embed else os.getenv("RESET_BANNER_URL", "https://via.placeholder.com/800x260/EEF/99C")
     return f"""
 <!doctype html>
 <html>
