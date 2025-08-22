@@ -48,6 +48,19 @@ class UserLoginRequest(BaseModel):
     email: EmailStr
     password: str
 
+# Password reset
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+class ResetPasswordValidateResponse(BaseModel):
+    ok: bool
+
+class ResetPasswordRequest(BaseModel):
+    email: Optional[EmailStr] = None
+    token: Optional[str] = None
+    code: Optional[str] = None
+    new_password: str
+
 # Token Response
 class TokenResponse(BaseModel):
     access_token: str

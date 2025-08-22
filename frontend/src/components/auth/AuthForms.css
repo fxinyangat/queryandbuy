@@ -65,7 +65,7 @@ input::-webkit-validation-bubble-arrow {
   box-shadow: 0 8px 32px rgba(87, 85, 254, 0.1);
   width: 100%;
   max-width: 480px;
-  min-width: 400px;
+  min-width: 0;
   border: 1px solid rgba(87, 85, 254, 0.1);
   position: relative;
   z-index: 1;
@@ -574,6 +574,8 @@ input::-webkit-validation-bubble-arrow {
   .auth-form {
     padding: 20px 16px;
     border-radius: 16px;
+    max-width: 100%;
+    width: 100%;
   }
   
   .auth-logo img {
@@ -582,6 +584,18 @@ input::-webkit-validation-bubble-arrow {
   
   .auth-form h2 {
     font-size: 20px;
+  }
+}
+
+/* Very small devices: ensure inputs fit */
+@media (max-width: 360px) {
+  .form-group .input-wrapper,
+  .password-input-container {
+    padding: 2px 8px;
+  }
+  .form-group input,
+  .password-input-container input {
+    font-size: 16px;
   }
 }
 

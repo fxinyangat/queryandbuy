@@ -9,6 +9,7 @@ from services.amazon_service import AmazonService
 from services.comparison_service import ComparisonService
 from services.grok_service import GrokService
 from services.user_service import UserService
+from services.verification_service import VerificationService
 from services.activity_service import ActivityService
 from database import get_db, engine
 from models import Base
@@ -29,10 +30,14 @@ from schemas import (
     ChatMessageListResponse,
     ChatMessageItem,
     SessionProductsPatchRequest,
+    ForgotPasswordRequest,
+    ResetPasswordRequest,
+    ResetPasswordValidateResponse,
 )
 from pydantic import BaseModel as PydBaseModel
 from auth_middleware import get_current_user, get_current_user_optional
 from starlette.requests import Request as StarletteRequest
+from auth_utils import get_password_hash
 
 # Load environment variables
 load_dotenv()
@@ -944,6 +949,14 @@ async def register_user(
         if not success:
             raise HTTPException(status_code=400, detail=message)
         
+        # Send verification email (best effort)
+        try:
+            verifier = VerificationService(db)
+            raw, code = verifier.issue_token(user)
+            verifier.send_verification_email(user.email, user, raw, code)
+        except Exception as e:
+            print(f"Warn: failed to send verification email - {e}")
+
         # Create user session with IP and User Agent
         access_token, refresh_token = user_service.create_user_session(
             user, 
@@ -965,6 +978,59 @@ async def register_user(
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Registration failed: {str(e)}")
+@app.get("/api/auth/verify")
+async def verify_email(token: str, db = Depends(get_db)):
+    try:
+        verifier = VerificationService(db)
+        ok = verifier.verify_by_token(token)
+        if not ok:
+            raise HTTPException(status_code=400, detail="Invalid or expired token")
+        return {"ok": True}
+    except HTTPException:
+        raise
+    except Exception as e:
+        # Log and return normalized error for FE
+        print(f"verify_email error: {e}")
+        raise HTTPException(status_code=400, detail="Invalid or expired token")
+
+class VerifyCodeRequest(BaseModel):
+    email: str
+    code: str
+
+@app.post("/api/auth/verify")
+async def verify_email_code(body: VerifyCodeRequest, db = Depends(get_db)):
+    try:
+        verifier = VerificationService(db)
+        ok = verifier.verify_by_code(body.email, body.code)
+        if not ok:
+            raise HTTPException(status_code=400, detail="Invalid or expired code")
+        return {"ok": True}
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"verify_email_code error: {e}")
+        raise HTTPException(status_code=400, detail="Invalid or expired code")
+
+class ResendVerifyRequest(BaseModel):
+    email: str
+
+@app.post("/api/auth/verify/resend")
+async def resend_verification(body: ResendVerifyRequest, db = Depends(get_db)):
+    try:
+        # Basic throttle: rely on DB send_count or external rate limiting if needed
+        user = UserService(db).get_user_by_email(body.email)
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        if user.email_verified:
+            return {"ok": True, "already_verified": True}
+        verifier = VerificationService(db)
+        raw, code = verifier.issue_token(user)
+        verifier.send_verification_email(user.email, user, raw, code)
+        return {"ok": True}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Resend failed: {str(e)}")
 
 @app.post("/api/auth/login", response_model=AuthResponse)
 async def login_user(
@@ -987,6 +1053,17 @@ async def login_user(
         if not success:
             raise HTTPException(status_code=401, detail=message)
         
+        # Enforce email verification before issuing tokens
+        if not getattr(user, 'email_verified', False):
+            # Resend verification email (best effort)
+            try:
+                verifier = VerificationService(db)
+                raw, code = verifier.issue_token(user)
+                verifier.send_verification_email(user.email, user, raw, code)
+            except Exception as e:
+                print(f"Warn: failed to resend verification email on login - {e}")
+            raise HTTPException(status_code=403, detail="Email not verified. We just sent you a new verification link.")
+
         # Create user session with IP and User Agent
         access_token, refresh_token = user_service.create_user_session(
             user, 
@@ -1103,6 +1180,128 @@ async def logout_user(
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Logout failed: {str(e)}")
+
+# ==========================================================================
+# PASSWORD RESET ENDPOINTS
+# ==========================================================================
+
+@app.post("/api/auth/password/forgot")
+async def forgot_password(body: ForgotPasswordRequest, db = Depends(get_db)):
+    try:
+        # Always respond 200 to avoid user enumeration
+        user = UserService(db).get_user_by_email(body.email)
+        if user:
+            try:
+                verifier = VerificationService(db)
+                raw, code = verifier.issue_token(user, purpose='password_reset')
+                verifier.send_password_reset_email(user.email, user, raw, code)
+            except Exception as e:
+                print(f"Warn: forgot_password email send failed: {e}")
+        return {"ok": True}
+    except Exception as e:
+        # Still return ok to avoid enumeration
+        print(f"forgot_password error: {e}")
+        return {"ok": True}
+
+
+@app.get("/api/auth/password/reset/validate", response_model=ResetPasswordValidateResponse)
+async def validate_reset_token(token: str, db = Depends(get_db)):
+    try:
+        verifier = VerificationService(db)
+        # Reuse normalization from verify_by_token, but check purpose=password_reset
+        # Manual check here to avoid marking used
+        from urllib.parse import unquote_plus
+        t = (token or "").strip()
+        t = unquote_plus(t)
+        if "token=" in t:
+            t = t.split("token=", 1)[1]
+        t = t.replace("=\r\n", "").replace("=\n", "").replace("\r", "").replace("\n", "")
+        t = "".join(t.split())
+        if t.startswith("3D"):
+            t = t[2:]
+        t = t.replace("=", "")
+        token_hash = verifier._hash_token(t)
+        from models import EmailVerificationToken
+        rec = (
+            db.query(EmailVerificationToken)
+            .filter(EmailVerificationToken.token_hash == token_hash, EmailVerificationToken.purpose == 'password_reset')
+            .first()
+        )
+        ok = bool(rec and rec.used_at is None and rec.expires_at >= __import__('datetime').datetime.now(__import__('datetime').timezone.utc))
+        return {"ok": ok}
+    except Exception:
+        return {"ok": False}
+
+
+@app.post("/api/auth/password/reset")
+async def reset_password(body: ResetPasswordRequest, db = Depends(get_db)):
+    try:
+        # Validate new password strength (basic)
+        if not body.new_password or len(body.new_password) < 8:
+            raise HTTPException(status_code=400, detail="Password must be at least 8 characters")
+        # Identify user and token record
+        from models import EmailVerificationToken, User
+        verifier = VerificationService(db)
+        user: Optional[User] = None
+        rec: Optional[EmailVerificationToken] = None
+
+        if body.token:
+            # Normalize and hash token
+            from urllib.parse import unquote_plus
+            t = (body.token or "").strip()
+            t = unquote_plus(t)
+            if "token=" in t:
+                t = t.split("token=", 1)[1]
+            t = t.replace("=\r\n", "").replace("=\n", "").replace("\r", "").replace("\n", "")
+            t = "".join(t.split())
+            if t.startswith("3D"):
+                t = t[2:]
+            t = t.replace("=", "")
+            token_hash = verifier._hash_token(t)
+            rec = (
+                db.query(EmailVerificationToken)
+                .filter(EmailVerificationToken.token_hash == token_hash, EmailVerificationToken.purpose == 'password_reset')
+                .first()
+            )
+        elif body.email and body.code:
+            from models import User as UserModel
+            user = db.query(UserModel).filter(UserModel.email == body.email).first()
+            rec = (
+                db.query(EmailVerificationToken)
+                .filter(EmailVerificationToken.user_id == (user.user_id if user else None), EmailVerificationToken.purpose == 'password_reset')
+                .order_by(EmailVerificationToken.created_at.desc())
+                .first()
+            )
+            if rec and rec.code != (body.code or ""):
+                rec = None
+        else:
+            raise HTTPException(status_code=400, detail="Provide token or (email + code)")
+
+        if not rec or rec.used_at is not None or rec.expires_at < __import__('datetime').datetime.now(__import__('datetime').timezone.utc):
+            raise HTTPException(status_code=400, detail="Invalid or expired token")
+
+        if not user:
+            user = db.query(User).filter(User.user_id == rec.user_id).first()
+        if not user:
+            raise HTTPException(status_code=400, detail="User not found")
+
+        # Update password and mark token used
+        user.password_hash = get_password_hash(body.new_password)
+        rec.used_at = __import__('datetime').datetime.now(__import__('datetime').timezone.utc)
+        db.commit()
+
+        # Invalidate all sessions for this user (security)
+        try:
+            usvc = UserService(db)
+            usvc.slide_expiry_for_user(user.user_id, minutes=0)
+        except Exception:
+            pass
+
+        return {"ok": True}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Reset failed: {str(e)}")
 
 if __name__ == "__main__":
     import uvicorn

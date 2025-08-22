@@ -167,3 +167,18 @@ class ChatMessage(Base):
     ai_metadata = Column(JSON, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     deleted_at = Column(DateTime(timezone=True), nullable=True)
+
+# Email verification token storage (one-time use)
+class EmailVerificationToken(Base):
+    __tablename__ = "email_verification_tokens"
+
+    token_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.user_id"), nullable=False, index=True)
+    token_hash = Column(String(256), nullable=False, unique=True)
+    code = Column(String(6), nullable=False)
+    expires_at = Column(DateTime(timezone=True), nullable=False)
+    used_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    send_count = Column(Integer, default=1)
+    # purpose: 'verify' (email verification) | 'password_reset' (password reset)
+    purpose = Column(String(30), nullable=False, server_default='verify', index=True)

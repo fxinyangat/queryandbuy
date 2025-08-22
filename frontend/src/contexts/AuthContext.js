@@ -17,6 +17,10 @@ export const AuthProvider = ({ children }) => {
   const [refreshTokenValue, setRefreshTokenValue] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  // Track user activity for idle timeout
+  const IDLE_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
+  const lastActivityRef = React.useRef(Date.now());
+  const idleTimerRef = React.useRef(null);
 
   // Initialize auth state from sessionStorage
   useEffect(() => {
@@ -198,11 +202,44 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const requestPasswordReset = async (email) => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/auth/password/forgot`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      });
+      return { success: true };
+    } catch (e) {
+      return { success: true };
+    }
+  };
+
+  const resetPassword = async ({ token, email, code, newPassword }) => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/auth/password/reset`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: token || null, email: email || null, code: code || null, new_password: newPassword })
+      });
+      if (res.ok) return { success: true };
+      const data = await res.json().catch(() => ({}));
+      return { success: false, error: data.detail || 'Reset failed' };
+    } catch (e) {
+      return { success: false, error: 'Network error' };
+    }
+  };
+
   // Silent refresh scheduled shortly before expiry (~2 minutes before 30m)
   useEffect(() => {
     if (!token) return;
     const timeout = setTimeout(async () => {
-      await refreshToken();
+      // Only refresh if user is not idle beyond the threshold
+      const idleFor = Date.now() - lastActivityRef.current;
+      if (idleFor < IDLE_TIMEOUT_MS - 60 * 1000) {
+        await refreshToken();
+      }
+      // If very idle, let token expire naturally; the idle timer below will logout
     }, 28 * 60 * 1000);
     return () => clearTimeout(timeout);
   }, [token, refreshTokenValue]);
@@ -230,6 +267,28 @@ export const AuthProvider = ({ children }) => {
     return () => window.removeEventListener('storage', onStorage);
   }, []);
 
+  // Idle timeout: logout after 30 minutes of no user activity
+  useEffect(() => {
+    const bump = () => {
+      lastActivityRef.current = Date.now();
+      if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+      idleTimerRef.current = setTimeout(() => {
+        // If still idle when timer fires, logout
+        if (Date.now() - lastActivityRef.current >= IDLE_TIMEOUT_MS) {
+          clearAuthData();
+        }
+      }, IDLE_TIMEOUT_MS);
+    };
+    // User interaction events
+    const events = ['mousemove', 'keydown', 'click', 'scroll', 'visibilitychange'];
+    events.forEach(evt => window.addEventListener(evt, bump, { passive: true }));
+    bump(); // initialize timer
+    return () => {
+      events.forEach(evt => window.removeEventListener(evt, bump));
+      if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+    };
+  }, []);
+
   const value = {
     user,
     token,
@@ -241,6 +300,8 @@ export const AuthProvider = ({ children }) => {
     logout,
     updateUser,
     refreshToken,
+    requestPasswordReset,
+    resetPassword,
   };
 
   return (

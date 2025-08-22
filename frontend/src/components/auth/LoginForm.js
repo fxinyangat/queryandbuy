@@ -112,7 +112,13 @@ const LoginForm = ({ onLoginSuccess }) => {
         // Redirect to dashboard or home page
         navigate('/');
       } else {
-        setErrors({ general: result.error || 'Login failed' });
+        if (result.error && /not verified/i.test(result.error)) {
+          // Seamless UX: guide user to verify without losing context
+          setErrors({});
+          navigate('/verify', { replace: false, state: { alert: { type: 'info', message: 'We sent you a new verification link. Please confirm your email to continue.' } } });
+        } else {
+          setErrors({ general: result.error || 'Login failed' });
+        }
       }
     } catch (error) {
       console.error('Login error:', error);
@@ -228,11 +234,10 @@ const LoginForm = ({ onLoginSuccess }) => {
               Continue with Apple (coming soon)
             </button>
           </div>
-          <p className="signin-link">
+          <p className="signin-link" style={{ marginTop: 8 }}>
+            <a href="/forgot-password" className="auth-link">Forgot password?</a>{' '}Or{' '}
             Don't have an account?{' '}
-            <a href="/register" className="auth-link">
-              Sign Up
-            </a>
+            <a href="/register" className="auth-link">Sign Up</a>
           </p>
         </div>
       </form>
