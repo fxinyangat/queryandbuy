@@ -42,10 +42,17 @@ from auth_utils import get_password_hash
 # Load environment variables
 load_dotenv()
 
-# Create database tables
-Base.metadata.create_all(bind=engine)
-
 app = FastAPI(title="Query and Buy API", version="1.0.0")
+
+# Create database tables on startup so import doesn't crash if DB is down
+@app.on_event("startup")
+def on_startup_create_tables():
+    try:
+        Base.metadata.create_all(bind=engine)
+    except Exception as e:
+        # Log and continue; health endpoint can still respond and logs on Railway will show this
+        print(f"Warning: failed to create tables on startup: {e}")
+
 
 # Add CORS middleware
 app.add_middleware(
