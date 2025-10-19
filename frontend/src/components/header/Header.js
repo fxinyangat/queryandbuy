@@ -4,7 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import './Header.css';
 import ConfirmationDialog from '../common/ConfirmationDialog';
 
-const Header = ({ children, onMenuItemClick }) => {
+const Header = ({ children, onMenuItemClick, onSidebarToggle, isSidebarExpanded }) => {
     const navigate = useNavigate();
     const { isAuthenticated, user, logout } = useAuth();
     const [confirmOpen, setConfirmOpen] = useState(false);
@@ -15,7 +15,7 @@ const Header = ({ children, onMenuItemClick }) => {
     const confirmLogout = async () => {
         setConfirmOpen(false);
         await logout();
-        navigate('/login', { replace: true });
+        navigate('/', { replace: true });
     };
     const cancelLogout = () => setConfirmOpen(false);
     const menuItems = [
@@ -28,7 +28,14 @@ const Header = ({ children, onMenuItemClick }) => {
         <>
         <header className="header">
             <div className="header-content">
-                {children}
+                <button className="hamburger-btn" onClick={onSidebarToggle} title={isSidebarExpanded ? 'Close menu' : 'Open menu'}>
+                    {isSidebarExpanded ? (
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+                    ) : (
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+                    )}
+                </button>
+                <span className="brand-slot">{children}</span>
                 <nav className="header-tabs desktop-only">
                     {menuItems.map(item => (
                         <button 
@@ -42,10 +49,16 @@ const Header = ({ children, onMenuItemClick }) => {
                 </nav>
                 <div className="header-actions">
                     {isAuthenticated ? (
-                        <>
-                            <span className="header-user" title={user?.email}>{user?.first_name || user?.firstName || user?.username}</span>
-                            <button className="logout-button" onClick={handleLogout}>Logout</button>
-                        </>
+                        <div className="avatar-menu">
+                            <button className="avatar" aria-haspopup="menu" aria-expanded="false" title={user?.email}>
+                                {(user?.first_name || user?.username || 'U').charAt(0).toUpperCase()}
+                            </button>
+                            <div className="menu">
+                                <button onClick={() => navigate('/profile')} className="menu-item">Profile</button>
+                                <button onClick={() => navigate('/favorites')} className="menu-item">Favorites</button>
+                                <button onClick={handleLogout} className="menu-item danger">Logout</button>
+                            </div>
+                        </div>
                     ) : (
                         <>
                             <button className="link-button" onClick={() => navigate('/login')}>Sign In</button>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider } from './contexts/AuthContext';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
@@ -9,6 +9,12 @@ import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import Header from './components/header/Header';
 import SearchBar from './components/search/SearchBar';
+import HeroSection from './components/hero/HeroSection';
+import TrendBackground from './components/hero/TrendBackground';
+import SuggestionChips from './components/hero/SuggestionChips';
+import TrendingRail from './components/hero/TrendingRail';
+import ShowcaseCard from './components/hero/ShowcaseCard';
+import BrandShowcase from './components/hero/BrandShowcase';
 import Logo from './components/common/Logo';
 import ResultsGrid from './components/results/ResultsGrid';
 import ProductDetail from './components/product/ProductDetail';
@@ -31,13 +37,19 @@ function App() {
     const [searchResults, setSearchResults] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
     const [selectedProduct, setSelectedProduct] = useState(null);
-    const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
+    const [isSidebarExpanded, setIsSidebarExpanded] = useState(() => {
+        try { return JSON.parse(localStorage.getItem('sidebar_expanded') || 'false'); } catch { return false; }
+    });
     const [searchHistory, setSearchHistory] = useState([]);
     const { selectedProducts, setSelectedProducts, activeComparisonSessionId, setActiveComparisonSessionId, isCompareMinimized, setIsCompareMinimized, enrichProducts } = useCompareContext();
     const [isComparing, setIsComparing] = useState(false);
     const [searchError, setSearchError] = useState(null);
     const [comparisonHistory, setComparisonHistory] = useState([]);
     const [isEnriching, setIsEnriching] = useState(false);
+    // Rails data sourced from backend (temporary until dedicated APIs)
+    const [railRecommended, setRailRecommended] = useState([]);
+    const [railYouMayLike, setRailYouMayLike] = useState([]);
+    const [railRecentlyViewed, setRailRecentlyViewed] = useState([]);
     const historyDebounceRef = React.useRef(null);
     const [currentToken, setCurrentToken] = useState(() => (typeof window !== 'undefined' ? (sessionStorage.getItem('token') || 'anon') : 'anon'));
     const authKey = typeof window !== 'undefined' ? (sessionStorage.getItem('token') || 'anon') : 'anon';
@@ -345,6 +357,51 @@ function App() {
         }
     };
 
+    // Load random products for rails from backend (uses unified search endpoint)
+    useEffect(() => {
+        const common = ['shoes', 'tv', 'headphones', 'flowers', 'coffee', 'desk', 'mouse', 'jacket', 'microwave'];
+        const fetchRandom = async () => {
+            const q = common[Math.floor(Math.random() * common.length)];
+            const res = await fetch(`${API_BASE_URL}/api/search`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query: q, platform: 'walmart_search', page: 1, log: false })
+            });
+            if (!res.ok) return [];
+            const data = await res.json();
+            return (data.results || []).slice(0, 12).map(p => ({
+                id: p.id,
+                title: p.name,
+                image: p.image_url || p.thumbnail,
+                price: p.price,
+                currency_symbol: p.currency_symbol || '$',
+                url: p.url
+            }));
+        };
+
+        const loadAll = async () => {
+            try {
+                const token = (typeof window !== 'undefined') ? sessionStorage.getItem('token') : null;
+                if (!token) return; // Only load rails for authenticated users
+                const [rec, like, recent] = await Promise.all([
+                    fetchRandom(),
+                    fetchRandom(),
+                    fetchRandom()
+                ]);
+                setRailRecommended(rec);
+                setRailYouMayLike(like);
+                setRailRecentlyViewed(recent);
+            } catch (_) {}
+        };
+        loadAll();
+    }, []);
+
+    // Helper: render children only when authenticated
+    const AuthOnly = ({ children }) => {
+        const { isAuthenticated } = useAuth();
+        return isAuthenticated ? children : null;
+    };
+
     const handleProductSelect = async (product) => {
         console.log("=== PRODUCT SELECT STARTED ===");
         console.log("Selected product:", product);
@@ -352,6 +409,21 @@ function App() {
         console.log("Product ID type:", typeof product.id);
         
         setSelectedProduct(product);
+        // Track recently viewed
+        try {
+            const viewedRaw = localStorage.getItem('recently_viewed');
+            const viewed = viewedRaw ? JSON.parse(viewedRaw) : [];
+            const entry = {
+                id: product.id || product.product_id || product.url || Math.random().toString(36).slice(2),
+                title: product.title || product.product_name || 'Product',
+                image: product.image || product.image_url || product.thumbnail,
+                price: product.price || null,
+                currency_symbol: product.currency_symbol || '$'
+            };
+            const exists = new Set(viewed.map(v => v.id));
+            const updated = [entry, ...viewed.filter(v => !exists.has(v.id))].slice(0, 10);
+            localStorage.setItem('recently_viewed', JSON.stringify(updated));
+        } catch (_) {}
         // Add class to prevent body scroll when detail is open
         document.body.style.overflow = 'hidden';
         
@@ -462,7 +534,11 @@ function App() {
     };
 
     const toggleSidebar = () => {
-        setIsSidebarExpanded(!isSidebarExpanded);
+        setIsSidebarExpanded(prev => {
+            const next = !prev;
+            try { localStorage.setItem('sidebar_expanded', JSON.stringify(next)); } catch {}
+            return next;
+        });
     };
 
     const handleCompareToggle = async (product) => {
@@ -809,17 +885,14 @@ function App() {
                     <Route path="/forgot-password" element={<ForgotPasswordPage />} />
                     <Route path="/reset-password" element={<ResetPasswordPage />} />
                     
-                    {/* Protected Routes */}
+                    {/* Public Landing Route */}
                     <Route path="/" element={
-                        <ProtectedRoute>
                             <div key={authKey} className={`App ${hasSearched ? 'search-mode' : ''} ${isSidebarExpanded ? 'sidebar-expanded' : ''}`}>
-                                <Header>
-                                    {hasSearched && (
-                                        <Logo 
-                                            src={logo} 
-                                            isCollapsed={hasSearched}
-                                        />
-                                    )}
+                                <Header onSidebarToggle={toggleSidebar} isSidebarExpanded={isSidebarExpanded}>
+                                    <Logo 
+                                        src={logo} 
+                                        isCollapsed={hasSearched}
+                                    />
                                 </Header>
                                 <Sidebar 
                                     isExpanded={isSidebarExpanded}
@@ -830,16 +903,53 @@ function App() {
                                 />
                                 <main className="main-content">
                                     {!hasSearched && (
-                                        <Logo 
-                                            src={logo} 
-                                            tagline="Query and Buy anything anywhere in natural language"
-                                            isCollapsed={hasSearched}
+                                        <>
+                                            <TrendBackground />
+                                            <HeroSection>
+                                                <SearchBar 
+                                                    onSearch={handleSearch}
+                                                    isExpanded={!hasSearched}
+                                                />
+                                                <SuggestionChips onSelect={(q) => handleSearch(q)} />
+                                            </HeroSection>
+                                            <ShowcaseCard />
+                                            <BrandShowcase />
+                                            <AuthOnly>
+                                                <TrendingRail 
+                                                    title="Resume comparing"
+                                                    items={comparisonHistory}
+                                                    onResume={handleSelectComparison}
+                                                />
+                                                <TrendingRail
+                                                    title="Recently viewed"
+                                                    items={railRecentlyViewed.map(p => ({ title: p.title, products: [p] }))}
+                                                    largeCards
+                                                    onResume={(item) => handleProductSelect(item.products[0])}
+                                                />
+                                                <TrendingRail
+                                                    title="Recommended for you"
+                                                    items={railRecommended
+                                                        .slice(0, 12)
+                                                        .sort((a,b) => (a.title || '').localeCompare(b.title || ''))
+                                                        .map(p => ({ title: p.title, products: [p] }))}
+                                                    largeCards
+                                                    onResume={(item) => handleProductSelect(item.products[0])}
+                                                />
+                                                <TrendingRail
+                                                    title="You may like"
+                                                    items={railYouMayLike.map(p => ({ title: p.title, products: [p] }))}
+                                                    largeCards
+                                                    onResume={(item) => handleProductSelect(item.products[0])}
+                                                />
+                                            </AuthOnly>
+                                        </>
+                                    )}
+                                    {hasSearched && (
+                                        <SearchBar 
+                                            onSearch={handleSearch}
+                                            isExpanded={!hasSearched}
                                         />
                                     )}
-                                    <SearchBar 
-                                        onSearch={handleSearch}
-                                        isExpanded={!hasSearched}
-                                    />
                                     {hasSearched && (
                                         <>
                                             {searchError && (
@@ -909,14 +1019,19 @@ function App() {
                                     )}
                                     {!isComparing && (
                                         <ResumeChatButton onClick={() => {
-                                            // Always open compare view; comparison history is available inside
+                                            const token = sessionStorage.getItem('token');
+                                            if (!token) {
+                                                // remember intent
+                                                sessionStorage.setItem('post_login_redirect', JSON.stringify({ action: 'open_compare' }));
+                                                window.location.href = '/login';
+                                                return;
+                                            }
                                             setIsComparing(true);
                                             setIsCompareMinimized(false);
                                         }} />
                                     )}
                                 </main>
                             </div>
-                        </ProtectedRoute>
                     } />
                     
                     {/* Catch all route - redirect to home */}

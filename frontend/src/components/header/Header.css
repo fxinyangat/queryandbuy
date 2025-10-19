@@ -6,8 +6,9 @@
     width: 100%;
     background: #FFFFFF;
     padding: 20px 16px;
-    height: 72px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    height: 74px;
+    box-shadow: none;
+    border-bottom: 1px solid rgba(87, 85, 254, 0.1);
     z-index: 1000;
     margin-left: 0px;
     box-sizing: border-box;
@@ -18,12 +19,51 @@
     width: 100%;
     max-width: 1200px;
     height: 100%;
-    margin: 0 auto;
+    margin: 0 16px;
     display: flex;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
     position: relative;
     transition: all 0.3s ease;
+}
+
+.hamburger-btn {
+    background: transparent;
+    border: none;
+    color: #5755FE;
+    cursor: pointer;
+    padding: 4px;
+    margin: 0 8px 0 4px;
+    border-radius: 8px;
+}
+.hamburger-btn:hover { background: rgba(87,85,254,0.08); }
+
+.brand-slot { display: none; }
+
+@media (min-width: 992px) {
+  .brand-slot { display: inline-flex; align-items: center; height: 100%; }
+}
+
+/* Ensure header logo has consistent size (independent of hero logo styles) */
+.brand-slot .logo-container {
+  display: flex !important;
+  align-items: center !important;
+  height: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+.brand-slot .logo {
+  height: 46px !important;
+  margin: 0 0 0 10px !important;
+  max-width: none;
+  display: block;
+  align-self: center;
+  vertical-align: middle;
+  line-height: 1;
+}
+
+@media (max-width: 1200px) {
+  .brand-slot .logo { height: 40px !important; }
 }
 
 .header-tabs {
@@ -49,6 +89,60 @@
     align-items: center;
     gap: 12px;
 }
+
+.avatar-menu {
+    position: relative;
+}
+
+.avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: #5755FE;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    cursor: pointer;
+}
+
+.avatar:focus {
+    outline: 2px solid rgba(87,85,254,0.45);
+    outline-offset: 2px;
+}
+
+.avatar-menu:hover .menu,
+.avatar:focus + .menu {
+    display: block;
+}
+
+.menu {
+    display: none;
+    position: absolute;
+    right: 0;
+    top: 42px;
+    background: #fff;
+    border: 1px solid rgba(0,0,0,0.08);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+    border-radius: 10px;
+    min-width: 160px;
+    padding: 6px;
+    z-index: 1001;
+}
+
+.menu-item {
+    width: 100%;
+    text-align: left;
+    background: transparent;
+    border: none;
+    padding: 10px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.menu-item:hover { background: #f6f7ff; }
+.menu-item.danger { color: #d22; }
 
 .header-user {
     font-size: 14px;
@@ -77,10 +171,7 @@
 }
 
 /* Shift header content when sidebar is expanded */
-.sidebar-expanded .header-content {
-    margin-left: 240px;
-    width: calc(100% - 240px);
-}
+/* Sidebar overlays content; header width stays full */
 
 .header-tab {
     border: none;
@@ -108,8 +199,8 @@
     }
 
     .header-content {
-        gap: 16px;
-        justify-content: center;
+        gap: 12px;
+        justify-content: flex-start;
     }
 
     .sidebar-expanded .header-content {

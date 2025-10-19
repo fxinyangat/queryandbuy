@@ -26,28 +26,16 @@ const Sidebar = ({
     const [working, setWorking] = useState(false);
 
     useEffect(() => {
-        const handleClickOutside = (event) => {
-            if (isExpanded && 
-                sidebarRef.current && 
-                !sidebarRef.current.contains(event.target) &&
-                !event.target.classList.contains('sidebar-toggle')) {
-                onToggle();
-            }
-        };
-
         const closeMenusOnOutside = (event) => {
             if (!event.target.closest('.item-menu')) {
                 setOpenItemMenuIndex(null);
             }
         };
-
-        document.addEventListener('mousedown', handleClickOutside);
         document.addEventListener('mousedown', closeMenusOnOutside);
         return () => {
-            document.removeEventListener('mousedown', handleClickOutside);
             document.removeEventListener('mousedown', closeMenusOnOutside);
         };
-    }, [isExpanded, onToggle]);
+    }, [isExpanded]);
 
     const capFirst = (txt) => {
         if (!txt || typeof txt !== 'string') return txt;
@@ -61,8 +49,9 @@ const Sidebar = ({
             if (!isExpanded || !isAuthenticated) return;
             setLoadingHistory(true);
             try {
-                const res = await fetchSearchHistory({ limit: 20, offset: 0 });
+                const res = await fetchSearchHistory({ limit: 5, offset: 0 });
                 let items = res.items || [];
+                items = items.slice(0, 5);
                 // Summarize long queries (best-effort) and map to display objects
                 const mapped = await Promise.all(items.map(async (it) => {
                     const q = it.search_query || '';
@@ -89,12 +78,23 @@ const Sidebar = ({
 
     return (
         <>
-            <button className="sidebar-toggle" onClick={onToggle}>
-                {isExpanded ? '◀' : '☰'}
+            <button className="sidebar-toggle" onClick={onToggle} title={isExpanded ? 'Close menu' : 'Open menu'}>
+                {isExpanded ? (
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+                ) : (
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+                )}
             </button>
-            
             <div className={`sidebar ${isExpanded ? 'expanded' : ''}`} ref={sidebarRef}>
                 <div className="sidebar-inner">
+                    {isExpanded && (
+                        <button className="sidebar-close" onClick={onToggle} aria-label="Close menu">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+                        </button>
+                    )}
+                    <div className="sidebar-logo">
+                        <img src={require('../../assets/logo.png')} alt="ShopQnB" />
+                    </div>
                     {/* Mobile Menu Items */}
                     <div className="sidebar-section mobile-only">
                         <div className="section-content">
@@ -118,6 +118,7 @@ const Sidebar = ({
                         </div>
                     </div>
 
+                    {isAuthenticated && (
                     <div className="sidebar-section">
                         <div className="section-content">
                             <div className="section-header">
@@ -135,7 +136,6 @@ const Sidebar = ({
                                         <div 
                                             className="history-item"
                                             onClick={() => {
-                                                // Debounced click handled in parent; avoid double triggers
                                                 onHistoryItemClick(it.search_query, { log: true });
                                             }}
                                             title={it.search_query}
@@ -170,6 +170,7 @@ const Sidebar = ({
                             )}
                         </div>
                     </div>
+                    )}
 
                     <div className="sidebar-section">
                         <div className="section-content">
@@ -189,8 +190,35 @@ const Sidebar = ({
                             ))}
                         </div>
                     </div>
+
+                    <div className="sidebar-section">
+                        <div className="section-content">
+                            <div className="section-header">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                                    <path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" stroke="currentColor" strokeWidth="2"/>
+                                </svg>
+                                <h3>Help & Company</h3>
+                            </div>
+                            {secondaryItems.map((item, idx) => (
+                                <div key={idx} className="category-item">
+                                    <span className="category-icon">{item.icon}</span>
+                                    <span>{item.name}</span>
+                                </div>
+                            ))}
+                            <div className="section-divider" />
+                            <div className="category-item">
+                                <span className="category-icon">❓</span>
+                                <span>Help</span>
+                            </div>
+                            <div className="category-item">
+                                <span className="category-icon">🔒</span>
+                                <span>Sign Out</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
+            {isExpanded && <div className="sidebar-overlay" onClick={onToggle} />}
             <ConfirmationDialog
                 isOpen={confirmOpen}
                 title={dialogTarget?.mode === 'rename' ? 'Rename Search' : 'Delete Search?'}
@@ -238,6 +266,13 @@ const categories = [
     { icon: '🎮', name: 'Gaming' },
     { icon: '🏠', name: 'Home' },
     { icon: '👕', name: 'Fashion' }
+];
+
+const secondaryItems = [
+    { icon: '💼', name: 'Careers' },
+    { icon: '📰', name: 'NewsRoom' },
+    { icon: '🛍️', name: 'Become Shop Owner' },
+    { icon: '🏪', name: 'Become Product Partner' },
 ];
 
 export default Sidebar; 

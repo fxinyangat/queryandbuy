@@ -28,8 +28,23 @@ const LoginPage = () => {
   }
 
   const handleLoginSuccess = (user) => {
-    // Redirect to the page they were trying to access, or dashboard
-    const from = location.state?.from?.pathname || '/dashboard';
+    // Post-login intent handling
+    try {
+      const intentRaw = sessionStorage.getItem('post_login_redirect');
+      if (intentRaw) {
+        const intent = JSON.parse(intentRaw);
+        sessionStorage.removeItem('post_login_redirect');
+        if (intent?.action === 'open_compare') {
+          navigate('/', { replace: true, state: { openCompare: true } });
+          return;
+        }
+        if (intent?.action === 'start_comparison') {
+          navigate('/', { replace: true, state: { openCompare: true } });
+          return;
+        }
+      }
+    } catch (_) {}
+    const from = location.state?.from?.pathname || '/';
     navigate(from, { replace: true });
   };
 

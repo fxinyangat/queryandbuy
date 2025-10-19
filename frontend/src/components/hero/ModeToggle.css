@@ -1,0 +1,21 @@
+.mode-toggle {
+  display: inline-flex;
+  background: #eef3ff;
+  padding: 4px;
+  border-radius: 999px;
+  gap: 4px;
+}
+.mode-toggle .pill {
+  border: none;
+  background: transparent;
+  padding: 8px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-weight: 600;
+  color: #5755FE;
+}
+.mode-toggle .pill.active {
+  background: #5755FE;
+  color: white;
+}
+

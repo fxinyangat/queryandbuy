@@ -19,7 +19,17 @@ const CompareBar = ({ selectedProducts, onStartComparison, onRemoveProduct, butt
             </div>
             <button 
                 className="compare-button"
-                onClick={onStartComparison}
+                onClick={() => {
+                    const token = (typeof window !== 'undefined') ? sessionStorage.getItem('token') : null;
+                    if (!token) {
+                        try {
+                            sessionStorage.setItem('post_login_redirect', JSON.stringify({ action: 'start_comparison' }));
+                        } catch (_) {}
+                        window.location.href = '/login';
+                        return;
+                    }
+                    onStartComparison?.();
+                }}
             >
                 {buttonText}
             </button>

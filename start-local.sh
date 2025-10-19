@@ -13,6 +13,8 @@ if check_port 8000; then
 else
     echo "🔧 Starting backend..."
     cd backend
+    # Set environment variable for local database (disable SSL)
+    export DATABASE_URL="postgresql://postgres:admin@localhost:5432/queryandbuy?sslmode=disable"
     # Activate virtual environment and start backend
     source venv/bin/activate && python -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload &
     BACKEND_PID=$!
